@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=EssoraFM Desktop
+Name[es]=Escritorio EssoraFM
+Comment=Start EssoraFM desktop icons and drive monitor
+Comment[es]=Inicia los iconos del escritorio y el monitor de unidades de EssoraFM
+Exec=essorafm --desktop
+Icon=/usr/local/essorafm/ui/icons/essorafm.svg
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,97 @@
+#!/bin/sh
+# EssoraFM - run_in_terminal
+# josejp2424 - GPL-3.0
+#
+# Ejecuta un archivo (script python/bash, binario, etc.) en una terminal
+# nueva, dejando la ventana abierta tras finalizar para que el usuario pueda
+# leer la salida.
+
+if [ $# -eq 0 ]; then
+    echo "Uso: $0 <archivo> [argumentos...]"
+    exit 1
+fi
+
+TARGET="$1"
+shift
+
+# Resolver a path absoluto si el archivo existe relativo al cwd
+if [ -e "$TARGET" ]; then
+    case "$TARGET" in
+        /*) ;;
+        *)  TARGET="$(pwd)/$TARGET" ;;
+    esac
+fi
+
+# Generar script wrapper temporal
+SCRIPT="$(mktemp /tmp/essorafm-runinterminal.XXXXXX)"
+chmod 700 "$SCRIPT"
+
+# Escapar TARGET para insertarlo seguro dentro del wrapper
+ESC_TARGET=$(printf "%s" "$TARGET" | sed "s/'/'\\\\''/g")
+
+{
+    printf '%s\n' '#!/bin/sh'
+    printf "TARGET='%s'\n" "$ESC_TARGET"
+    cat <<'INNER'
+if [ -d "$TARGET" ]; then
+    cd "$TARGET" || exit 1
+    ${SHELL:-/bin/sh} -i
+    EXIT=$?
+elif [ -f "$TARGET" ]; then
+    cd "$(dirname "$TARGET")" || exit 1
+    case "$TARGET" in
+        *.py)  python3 "$TARGET" "$@" ;;
+        *.sh)  /bin/sh "$TARGET" "$@" ;;
+        *)
+            if [ -x "$TARGET" ]; then
+                "$TARGET" "$@"
+            else
+                /bin/sh "$TARGET" "$@"
+            fi
+            ;;
+    esac
+    EXIT=$?
+else
+    "$TARGET" "$@"
+    EXIT=$?
+fi
+echo
+echo "----------------------------------------"
+echo "Proceso finalizado (exit $EXIT). Pulsa ENTER para cerrar."
+read _dummy
+INNER
+} > "$SCRIPT"
+
+# Limpieza diferida del wrapper
+( sleep 2; rm -f "$SCRIPT" ) >/dev/null 2>&1 &
+
+run_terminal() {
+    term="$1"
+    shift
+    "$term" "$@" &
+}
+
+# Detectar y ejecutar terminal disponible
+if command -v lxterminal >/dev/null 2>&1; then
+    run_terminal lxterminal -e "$SCRIPT" "$@"
+elif command -v xfce4-terminal >/dev/null 2>&1; then
+    run_terminal xfce4-terminal -e "$SCRIPT $*"
+elif command -v konsole >/dev/null 2>&1; then
+    run_terminal konsole -e "$SCRIPT" "$@"
+elif command -v gnome-terminal >/dev/null 2>&1; then
+    run_terminal gnome-terminal -- "$SCRIPT" "$@"
+elif command -v terminator >/dev/null 2>&1; then
+    run_terminal terminator -e "$SCRIPT $*"
+elif command -v urxvt >/dev/null 2>&1; then
+    run_terminal urxvt -e "$SCRIPT" "$@"
+elif command -v rxvt >/dev/null 2>&1; then
+    run_terminal rxvt -e "$SCRIPT" "$@"
+elif command -v xterm >/dev/null 2>&1; then
+    run_terminal xterm -e "$SCRIPT" "$@"
+else
+    echo "Error: No se encontró ningún terminal compatible" >&2
+    rm -f "$SCRIPT"
+    exit 1
+fi
+
+exit 0

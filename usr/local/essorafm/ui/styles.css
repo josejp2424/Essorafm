@@ -1,0 +1,118 @@
+/* EssoraFM clean compact layout */
+window {
+    background: #242424;
+}
+
+headerbar {
+    background: #252525;
+    color: #ffffff;
+    border-bottom: 2px solid #77960A;
+    padding: 4px 6px;
+}
+
+.essorafm-title {
+    font-weight: 600;
+}
+
+.essorafm-header-button {
+    padding: 4px 6px;
+    margin: 0 2px;
+    border-radius: 6px;
+}
+
+.essorafm-root {
+    background: #242424;
+}
+
+.essorafm-paned paned separator {
+    background: #353535;
+}
+
+.essorafm-sidebar-box,
+.essorafm-sidebar,
+.essorafm-sidebar-tree {
+    background: #303030;
+}
+
+.essorafm-sidebar-tree.view {
+    background: #303030;
+    color: #ffffff;
+}
+
+.essorafm-sidebar-tree.view:selected,
+.essorafm-sidebar-tree.view:selected:focus {
+    background: #555555;
+    color: #ffffff;
+}
+
+.essorafm-content {
+    background: #242424;
+}
+
+.essorafm-toolbar {
+    background: #242424;
+}
+
+.essorafm-toolbutton {
+    padding: 4px 7px;
+    border-radius: 7px;
+    min-height: 28px;
+}
+
+.essorafm-pathbar {
+    padding: 6px 8px;
+    border-radius: 7px;
+}
+
+.essorafm-tabs tab {
+    padding: 3px 8px;
+    border-radius: 7px 7px 0 0;
+}
+
+.essorafm-tab-close {
+    padding: 0 2px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+.essorafm-status {
+    padding: 3px 4px;
+    color: #d8d8d8;
+}
+
+treeview.view {
+    background: #262626;
+    color: #ffffff;
+}
+
+label.dim-label {
+    color: #aaaaaa;
+}
+
+button.about-green, button.about-green label {
+    color: #99AE47;
+}
+
+
+.essorafm-sidebar-art-box {
+    background: #303030;
+    padding: 8px 8px 12px 8px;
+    border-top: 1px solid #3a3a3a;
+}
+
+.essorafm-sidebar-art {
+    opacity: 0.96;
+}
+/* Forzar texto debajo de iconos en IconView */
+.essorafm-iconview {
+    -GtkIconView-cell-padding: 6px;
+}
+
+.essorafm-iconview cell {
+    text-align: center;
+}
+
+/* Forzar orientación vertical */
+.essorafm-iconview .view {
+    -gtk-icon-view-text-below: 1;
+}

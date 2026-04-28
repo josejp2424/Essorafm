@@ -1,0 +1,16 @@
+#!/bin/sh
+# EssoraFM launcher
+# Author: josejp2424
+# Keep command line arguments:
+#   essorafm --desktop
+#   essorafm /media/USER/VOLUME
+#   essorafm -D /media/USER/VOLUME
+
+APP="/usr/local/essorafm/essorafm.py"
+
+if [ ! -f "$APP" ]; then
+    echo "EssoraFM error: $APP not found" >&2
+    exit 1
+fi
+
+exec python3 "$APP" "$@"

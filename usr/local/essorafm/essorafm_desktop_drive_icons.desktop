@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EssoraFM
+Comment=Essora file manager
+Exec=/usr/local/essorafm/bin/desktop_drive_icons
+Icon=/usr/local/essorafm/ui/icons/essorafm.svg
+Terminal=false
+Type=Application
+Categories=System;FileManager;
+StartupNotify=true
