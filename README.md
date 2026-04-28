@@ -98,22 +98,42 @@ Full UI translations for **12 languages**: English, Spanish, Catalan, German, Fr
 
 ## Screenshots
 
-> *Add your screenshots in a `screenshots/` directory and reference them here.*
+<div align="center">
 
-```
-screenshots/
-├── main-window.png
-├── preview-panel.png
-├── preferences.png
-└── duplicates.png
-```
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="assets/essorafm.png" alt="Main window"><br>
+<sub><b>Main window</b></sub>
+</td>
+<td align="center" width="50%">
+<img src="assets/essorafm2.png" alt="Preview panel"><br>
+<sub><b>Preview panel</b></sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<img src="assets/essorafm3.png" alt="Preferences"><br>
+<sub><b>Preferences</b></sub>
+</td>
+<td align="center" width="50%">
+<img src="assets/essorafm4.png" alt="Duplicate scanner"><br>
+<sub><b>Duplicate scanner</b></sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<img src="assets/essorafm5.png" alt="Network bookmarks"><br>
+<sub><b>Network bookmarks</b></sub>
+</td>
+<td align="center" width="50%">
+<img src="assets/essorafm6.png" alt="About dialog"><br>
+<sub><b>About</b></sub>
+</td>
+</tr>
+</table>
 
-```markdown
-![Main window](screenshots/main-window.png)
-![Preview panel](screenshots/preview-panel.png)
-![Preferences](screenshots/preferences.png)
-![Duplicate scanner](screenshots/duplicates.png)
-```
+</div>
 
 ---
 
@@ -453,8 +473,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 ## Credits
 
-- **Author and maintainer**: josejp2424 
-- **Co-author**: Nilsonmorales (Woofshahenzup)
+- **Author and maintainer**: josejp2424
+- **Co-author**: Nilsonmorales (Woofshahenzup) [https://github.com/Woofshahenzup)
 - **Desktop drive icons**: forked from [01micko/desktop-drive-icons](https://github.com/01micko/desktop-drive-icons)
 - **Default theme**: adapted from the Catppuccin Mocha palette
 - **Tested and shipped with**: [Essora Linux](https://sourceforge.net/projects/essora/)
