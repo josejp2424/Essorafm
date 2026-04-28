@@ -474,7 +474,7 @@ the Free Software Foundation, either version 3 of the License, or
 ## Credits
 
 - **Author and maintainer**: josejp2424
-- **Co-author**: Nilsonmorales (Woofshahenzup) [https://github.com/Woofshahenzup)
+- **Co-author**: Nilsonmorales [Woofshahenzup](https://github.com/Woofshahenzup)
 - **Desktop drive icons**: forked from [01micko/desktop-drive-icons](https://github.com/01micko/desktop-drive-icons)
 - **Default theme**: adapted from the Catppuccin Mocha palette
 - **Tested and shipped with**: [Essora Linux](https://sourceforge.net/projects/essora/)
