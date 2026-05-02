@@ -7,6 +7,7 @@
 # EssoraFM
 # Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
+import json
 import shutil
 import subprocess
 import shlex
@@ -25,6 +26,28 @@ from core.settings import CONFIG_DIR
 from core.i18n import tr
 from core.xdg import xdg_dir, XDG
 from app.wallpaper_carousel import WallpaperCarouselDialog
+
+
+_ICON_POSITIONS_FILE = os.path.join(
+    os.path.expanduser('~'), '.config', 'essorafm', 'desktop_icon_positions.json'
+)
+
+
+def _load_icon_positions():
+    try:
+        with open(_ICON_POSITIONS_FILE, 'r', encoding='utf-8') as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def _save_icon_positions(positions):
+    try:
+        os.makedirs(os.path.dirname(_ICON_POSITIONS_FILE), exist_ok=True)
+        with open(_ICON_POSITIONS_FILE, 'w', encoding='utf-8') as fh:
+            json.dump(positions, fh, indent=2)
+    except Exception:
+        pass
 
 
 class DesktopDriveIcon(Gtk.EventBox):
@@ -112,26 +135,51 @@ class DesktopDriveIcon(Gtk.EventBox):
         if event.button == 3:
             self.desktop.popup_menu_for_item(self.item, event)
             return True
-        if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
+        single = getattr(self.desktop, 'desktop_single_click', False)
+        if single and event.button == 1 and event.type == Gdk.EventType.BUTTON_PRESS:
+            self.desktop.open_item(self.item)
+            return True
+        if not single and event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
             self.desktop.open_item(self.item)
             return True
         return False
 
     def _on_button_release(self, _widget, event):
-        if event.button == 1:
-            self.desktop.open_item(self.item)
-            return True
         return False
 
 
 class DesktopFileIcon(Gtk.EventBox):
+
+
+    _THUMB_EXTS = {
+        '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.tiff', '.tif',
+        '.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.m4v', '.ogv',
+        '.ts', '.wmv', '.3gp', '.pdf', '.svg',
+    }
+
     def __init__(self, path, desktop):
         super().__init__()
         self.path = path
         self.desktop = desktop
-        self.set_visible_window(False)
-        self.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK)
-        self.connect('button-press-event', self._on_button_press)
+        self.set_visible_window(True)          
+        self.get_style_context().add_class('essorafm-desktop-icon')
+        self.set_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK |
+            Gdk.EventMask.BUTTON_RELEASE_MASK |
+            Gdk.EventMask.POINTER_MOTION_MASK |
+            Gdk.EventMask.BUTTON1_MOTION_MASK
+        )
+        self.connect('button-press-event',   self._on_button_press)
+        self.connect('button-release-event', self._on_button_release)
+        self.connect('motion-notify-event',  self._on_motion)
+
+
+        self._dragging    = False
+        self._drag_ptr_x  = 0
+        self._drag_ptr_y  = 0
+        self._drag_icon_x = 0
+        self._drag_icon_y = 0
+        self._DRAG_THRESHOLD = 6
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_size_request(self.desktop.cell_w, self.desktop.cell_h)
@@ -139,7 +187,12 @@ class DesktopFileIcon(Gtk.EventBox):
         box.set_valign(Gtk.Align.CENTER)
         self.add(box)
 
-        image = Gtk.Image.new_from_gicon(self._gicon_for_path(path), Gtk.IconSize.DIALOG)
+ 
+        pixbuf = self._best_pixbuf(path)
+        if pixbuf is not None:
+            image = Gtk.Image.new_from_pixbuf(pixbuf)
+        else:
+            image = Gtk.Image.new_from_gicon(self._gicon_for_path(path), Gtk.IconSize.DIALOG)
         image.set_pixel_size(self.desktop.icon_size)
         box.pack_start(image, False, False, 0)
 
@@ -153,6 +206,119 @@ class DesktopFileIcon(Gtk.EventBox):
         label.get_style_context().add_class('essorafm-desktop-label')
         box.pack_start(label, False, False, 0)
         self.set_tooltip_text(path)
+
+    def _best_pixbuf(self, path):
+        """Devuelve un Pixbuf para el icono del escritorio con este orden de prioridad:
+        1. Miniatura real (imagen/video/pdf) via Thumbnailer si está disponible
+        2. Icono personalizado de carpeta (.directory file o metadata de Nautilus/Nemo)
+        3. None → el llamador usará _gicon_for_path como fallback
+        """
+        size = self.desktop.icon_size
+
+        real = os.path.realpath(path) if os.path.islink(path) else path
+
+        ext = os.path.splitext(real)[1].lower()
+        if ext in self._THUMB_EXTS and os.path.isfile(real):
+            thumbnailer = getattr(self.desktop, '_thumbnailer', None)
+            if thumbnailer is None:
+
+                try:
+                    from services.thumbnailer import Thumbnailer
+                    thumbnailer = Thumbnailer(self.desktop.icon_loader, enabled=True)
+                    self.desktop._thumbnailer = thumbnailer
+                except Exception:
+                    thumbnailer = None
+            if thumbnailer is not None:
+                try:
+                    pix = thumbnailer.thumbnail_for(real, size=size)
+                    if pix is not None:
+                        return pix
+                except Exception:
+                    pass
+
+
+        if os.path.isdir(real):
+            pix = self._folder_custom_icon(real, size)
+            if pix is not None:
+                return pix
+
+        return None
+
+    def _folder_custom_icon(self, folder_path, size):
+        """Lee el icono personalizado de una carpeta desde .directory o metadatos
+        de gestores de archivos (Nautilus/Nemo/Thunar)."""
+        icon_theme = Gtk.IconTheme.get_default()
+
+        dot_dir = os.path.join(folder_path, '.directory')
+        if os.path.isfile(dot_dir):
+            try:
+                kf = GLib.KeyFile()
+                kf.load_from_file(dot_dir, GLib.KeyFileFlags.NONE)
+                icon_name = ''
+                try:
+                    icon_name = kf.get_locale_string('Desktop Entry', 'Icon', None) or ''
+                except Exception:
+                    pass
+                if not icon_name:
+                    try:
+                        icon_name = kf.get_string('Desktop Entry', 'Icon')
+                    except Exception:
+                        pass
+                if icon_name:
+                    if os.path.isabs(icon_name) and os.path.exists(icon_name):
+                        try:
+                            return GdkPixbuf.Pixbuf.new_from_file_at_size(icon_name, size, size)
+                        except Exception:
+                            pass
+                    else:
+                        for s in (size, 48, 64, 32):
+                            try:
+                                pix = icon_theme.load_icon(icon_name, s, Gtk.IconLookupFlags.FORCE_SIZE)
+                                if pix:
+                                    return pix
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+        try:
+            meta_dir = os.path.join(os.path.expanduser('~'), '.local', 'share', 'gvfs-metadata')
+
+            folder_name = os.path.basename(folder_path.rstrip('/'))
+            for meta_name in (folder_name, 'home'):
+                meta_file = os.path.join(meta_dir, meta_name)
+                if not os.path.exists(meta_file):
+                    continue
+
+                break
+        except Exception:
+            pass
+
+
+        folder_lower = os.path.basename(folder_path.rstrip('/')).lower()
+        _XDG_ICONS = {
+            'documents': 'folder-documents',
+            'downloads': 'folder-download',
+            'pictures':  'folder-pictures',
+            'photos':    'folder-pictures',
+            'music':     'folder-music',
+            'videos':    'folder-videos',
+            'movies':    'folder-videos',
+            'desktop':   'user-desktop',
+            'public':    'folder-publicshare',
+            'templates': 'folder-templates',
+        }
+        xdg_icon = _XDG_ICONS.get(folder_lower)
+        if xdg_icon:
+            for s in (size, 48, 64):
+                try:
+                    pix = icon_theme.load_icon(xdg_icon, s, Gtk.IconLookupFlags.FORCE_SIZE)
+                    if pix:
+                        return pix
+                except Exception:
+                    pass
+
+        return None
 
     def _display_name(self, path):
         name = os.path.basename(path)
@@ -234,13 +400,508 @@ class DesktopFileIcon(Gtk.EventBox):
         return None
 
     def _on_button_press(self, _widget, event):
-        if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
-            self.desktop.open_desktop_file(self.path)
-            return True
         if event.button == 3:
             self.desktop.popup_menu_for_desktop_file(self.path, event)
             return True
+        if event.button == 1:
+            if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+
+                if not getattr(self.desktop, 'desktop_single_click', False):
+                    self.desktop.open_desktop_file(self.path)
+                return True
+
+            self._dragging   = False
+            self._drag_ptr_x = event.x_root
+            self._drag_ptr_y = event.y_root
+            alloc = self.get_allocation()
+            self._drag_icon_x = alloc.x
+            self._drag_icon_y = alloc.y
+            return True
         return False
+
+    def _on_motion(self, _widget, event):
+        if not (event.state & Gdk.ModifierType.BUTTON1_MASK):
+            return False
+        dx = event.x_root - self._drag_ptr_x
+        dy = event.y_root - self._drag_ptr_y
+        if not self._dragging:
+            if abs(dx) < self._DRAG_THRESHOLD and abs(dy) < self._DRAG_THRESHOLD:
+                return False
+            self._dragging = True
+
+        nx = int(self._drag_icon_x + dx)
+        ny = int(self._drag_icon_y + dy)
+        sw, sh = self.desktop._screen_size()
+        nx = max(0, min(nx, sw - self.desktop.cell_w))
+        ny = max(0, min(ny, sh - self.desktop.cell_h))
+        self.desktop.fixed.move(self, nx, ny)
+        return True
+
+    def _on_button_release(self, _widget, event):
+        if event.button == 1 and self._dragging:
+            alloc = self.get_allocation()
+            pos = _load_icon_positions()
+            pos[os.path.basename(self.path)] = [alloc.x, alloc.y]
+            _save_icon_positions(pos)
+            self._dragging = False
+            return True
+        if event.button == 1 and not self._dragging:
+            single = getattr(self.desktop, 'desktop_single_click', False)
+            if single:
+                self.desktop.open_desktop_file(self.path)
+                return True
+        return False
+
+
+class AppPickerDialog(Gtk.Dialog):
+    """Diálogo visual tipo grid para enviar apps, archivos o carpetas al escritorio.
+
+    Tres modos seleccionables mediante botones:
+      - Aplicaciones: grid de .desktop de /usr/share/applications (con búsqueda)
+      - Archivos: lista de archivos comunes del home + botón Examinar
+      - Carpetas: lista de carpetas comunes del home + botón Examinar
+    """
+
+    APP_DIRS = [
+        '/usr/share/applications',
+        '/usr/local/share/applications',
+        os.path.expanduser('~/.local/share/applications'),
+    ]
+    CELL_SIZE = 90
+    ICON_SIZE  = 48
+
+
+    _COMMON_FILES = [
+        ('~/Desktop',     'user-desktop',      'desktop'),
+        ('~/.bashrc',     'text-x-script',     '.bashrc'),
+        ('~/.bash_profile', 'text-x-script',   '.bash_profile'),
+        ('~/.profile',    'text-x-script',     '.profile'),
+        ('~/.zshrc',      'text-x-script',     '.zshrc'),
+    ]
+    _COMMON_FOLDERS = [
+        ('~',             'user-home',         'Home'),
+        ('~/Documents',   'folder-documents',  'Documents'),
+        ('~/Downloads',   'folder-download',   'Downloads'),
+        ('~/Pictures',    'folder-pictures',   'Pictures'),
+        ('~/Music',       'folder-music',      'Music'),
+        ('~/Videos',      'folder-videos',     'Videos'),
+        ('~/Desktop',     'user-desktop',      'Desktop'),
+        ('/tmp',          'folder',            '/tmp'),
+        ('/usr/share/applications', 'folder',  'Applications'),
+    ]
+
+    def __init__(self, parent):
+        super().__init__(title=tr('app_picker_title'), transient_for=parent,
+                         modal=True, use_header_bar=0)
+        self.set_default_size(720, 560)
+        self.add_buttons(tr('cancel'), Gtk.ResponseType.CANCEL,
+                         tr('add_selected'), Gtk.ResponseType.OK)
+        self._selected_path = None
+        self._all_apps = []
+        self._filtered = []
+        self._selected_vbox = None
+        self._current_mode = 'apps'  
+
+        content = self.get_content_area()
+
+
+        mode_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        mode_bar.set_margin_top(10)
+        mode_bar.set_margin_bottom(6)
+        mode_bar.set_margin_start(12)
+        mode_bar.set_margin_end(12)
+        mode_bar.get_style_context().add_class('linked')
+
+        self._btn_apps    = Gtk.ToggleButton(label=tr('picker_tab_apps'))
+        self._btn_files   = Gtk.ToggleButton(label=tr('picker_tab_files'))
+        self._btn_folders = Gtk.ToggleButton(label=tr('picker_tab_folders'))
+
+        for btn in (self._btn_apps, self._btn_files, self._btn_folders):
+            btn.set_size_request(140, 34)
+        self._btn_apps.set_active(True)
+
+        self._btn_apps.connect('toggled',    self._on_mode_toggled, 'apps')
+        self._btn_files.connect('toggled',   self._on_mode_toggled, 'files')
+        self._btn_folders.connect('toggled', self._on_mode_toggled, 'folders')
+
+        mode_bar.pack_start(self._btn_apps,    True, True, 0)
+        mode_bar.pack_start(self._btn_files,   True, True, 0)
+        mode_bar.pack_start(self._btn_folders, True, True, 0)
+        content.pack_start(mode_bar, False, False, 0)
+
+
+        self._search_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self._search_bar.set_margin_bottom(4)
+        self._search_bar.set_margin_start(12)
+        self._search_bar.set_margin_end(12)
+        self._search_entry = Gtk.SearchEntry()
+        self._search_entry.set_placeholder_text(tr('app_picker_search'))
+        self._search_entry.set_hexpand(True)
+        self._search_entry.connect('search-changed', self._on_search_changed)
+        self._search_bar.pack_start(self._search_entry, True, True, 0)
+        content.pack_start(self._search_bar, False, False, 0)
+
+        self._stack = Gtk.Stack()
+        self._stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        self._stack.set_transition_duration(120)
+        self._stack.set_hexpand(True)
+        self._stack.set_vexpand(True)
+
+        apps_scroll = Gtk.ScrolledWindow()
+        apps_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        apps_scroll.set_margin_start(8)
+        apps_scroll.set_margin_end(8)
+        apps_scroll.set_margin_bottom(8)
+        self._flowbox = Gtk.FlowBox()
+        self._flowbox.set_valign(Gtk.Align.START)
+        self._flowbox.set_max_children_per_line(20)
+        self._flowbox.set_min_children_per_line(3)
+        self._flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self._flowbox.set_homogeneous(True)
+        self._flowbox.set_row_spacing(4)
+        self._flowbox.set_column_spacing(4)
+        self._flowbox.set_margin_top(6)
+        self._flowbox.set_margin_bottom(6)
+        self._flowbox.set_margin_start(6)
+        self._flowbox.set_margin_end(6)
+        apps_scroll.add(self._flowbox)
+        self._stack.add_named(apps_scroll, 'apps')
+
+        self._files_panel = self._build_list_panel('files')
+        self._stack.add_named(self._files_panel, 'files')
+
+        self._folders_panel = self._build_list_panel('folders')
+        self._stack.add_named(self._folders_panel, 'folders')
+
+        content.pack_start(self._stack, True, True, 0)
+        content.show_all()
+
+        self._load_apps()
+        self._rebuild_grid()
+        self._stack.set_visible_child_name('apps')
+
+
+    def _on_mode_toggled(self, btn, mode):
+        if not btn.get_active():
+            return
+
+        for b, m in ((self._btn_apps, 'apps'), (self._btn_files, 'files'), (self._btn_folders, 'folders')):
+            if m != mode and b.get_active():
+                b.handler_block_by_func(self._on_mode_toggled)
+                b.set_active(False)
+                b.handler_unblock_by_func(self._on_mode_toggled)
+        self._current_mode = mode
+        self._selected_path = None
+        self._selected_vbox = None
+        self._search_bar.set_visible(mode == 'apps')
+        self._stack.set_visible_child_name(mode)
+        if mode == 'files':
+            self._populate_list_panel(self._files_panel, 'files')
+        elif mode == 'folders':
+            self._populate_list_panel(self._folders_panel, 'folders')
+
+
+    def _build_list_panel(self, kind):
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_hexpand(True)
+        scroll.set_vexpand(True)
+        scroll.set_margin_start(10)
+        scroll.set_margin_end(10)
+        scroll.set_margin_top(4)
+        scroll.set_margin_bottom(4)
+
+        listbox = Gtk.ListBox()
+        listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        listbox.set_activate_on_single_click(True)
+        listbox.get_style_context().add_class('essorafm-picker-listbox')
+        listbox.connect('row-activated', self._on_list_row_activated, kind)
+        scroll.add(listbox)
+        outer.pack_start(scroll, True, True, 0)
+
+        browse_key = 'picker_browse_folder' if kind == 'folders' else 'picker_browse_file'
+        browse_btn = Gtk.Button()
+        browse_btn.set_margin_start(12)
+        browse_btn.set_margin_end(12)
+        browse_btn.set_margin_top(4)
+        browse_btn.set_margin_bottom(10)
+        browse_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        browse_icon = Gtk.Image.new_from_icon_name('document-open-symbolic', Gtk.IconSize.MENU)
+        browse_lbl  = Gtk.Label(label=tr(browse_key))
+        browse_hbox.pack_start(browse_icon, False, False, 0)
+        browse_hbox.pack_start(browse_lbl, False, False, 0)
+        browse_hbox.set_halign(Gtk.Align.CENTER)
+        browse_btn.add(browse_hbox)
+        browse_btn.connect('clicked', self._on_browse_panel_clicked, kind)
+        outer.pack_start(browse_btn, False, False, 0)
+
+        outer._listbox = listbox
+        return outer
+
+    def _populate_list_panel(self, panel, kind):
+        listbox = panel._listbox
+        for row in list(listbox.get_children()):
+            listbox.remove(row)
+
+        icon_theme = Gtk.IconTheme.get_default()
+        entries = self._COMMON_FOLDERS if kind == 'folders' else self._COMMON_FILES
+
+        for raw_path, icon_name, label in entries:
+            real_path = os.path.expanduser(raw_path)
+            if not os.path.exists(real_path):
+                continue
+            row = Gtk.ListBoxRow()
+            row._picker_path = real_path
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            hbox.set_margin_top(6)
+            hbox.set_margin_bottom(6)
+            hbox.set_margin_start(10)
+            hbox.set_margin_end(10)
+
+            pix = None
+            try:
+                pix = icon_theme.load_icon(icon_name, 32, Gtk.IconLookupFlags.FORCE_SIZE)
+            except Exception:
+                pass
+            if pix:
+                img = Gtk.Image.new_from_pixbuf(pix)
+            else:
+                fallback = 'folder' if kind == 'folders' else 'text-x-generic'
+                img = Gtk.Image.new_from_icon_name(fallback, Gtk.IconSize.DND)
+            hbox.pack_start(img, False, False, 0)
+
+            vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            name_lbl = Gtk.Label(label=label)
+            name_lbl.set_halign(Gtk.Align.START)
+            path_lbl = Gtk.Label(label=real_path)
+            path_lbl.set_halign(Gtk.Align.START)
+            path_lbl.get_style_context().add_class('dim-label')
+            path_lbl.set_ellipsize(3)
+            vbox.pack_start(name_lbl, False, False, 0)
+            vbox.pack_start(path_lbl, False, False, 0)
+            hbox.pack_start(vbox, True, True, 0)
+
+            row.add(hbox)
+            listbox.add(row)
+
+        listbox.show_all()
+
+    def _on_list_row_activated(self, listbox, row, kind):
+        if row is None:
+            return
+        path = getattr(row, '_picker_path', None)
+        if path:
+            self._selected_path = path
+            if self._selected_vbox is not None:
+                self._selected_vbox.get_style_context().remove_class('essorafm-app-picker-selected')
+            self._selected_vbox = None
+
+    def _on_browse_panel_clicked(self, _btn, kind):
+        if kind == 'folders':
+            action = Gtk.FileChooserAction.SELECT_FOLDER
+            title  = tr('select_folder')
+        else:
+            action = Gtk.FileChooserAction.OPEN
+            title  = tr('browse')
+        fc = Gtk.FileChooserDialog(title=title, transient_for=self, action=action)
+        fc.add_buttons(tr('cancel'), Gtk.ResponseType.CANCEL,
+                       tr('open'), Gtk.ResponseType.OK)
+        fc.set_current_folder(os.path.expanduser('~'))
+        if fc.run() == Gtk.ResponseType.OK:
+            self._selected_path = fc.get_filename()
+            fc.destroy()
+            self.response(Gtk.ResponseType.OK)
+        else:
+            fc.destroy()
+
+
+    def _load_apps(self):
+        icon_theme = Gtk.IconTheme.get_default()
+        apps = {}
+        for d in self.APP_DIRS:
+            if not os.path.isdir(d):
+                continue
+            for fname in sorted(os.listdir(d)):
+                if not fname.endswith('.desktop'):
+                    continue
+                path = os.path.join(d, fname)
+                entry = self._parse_desktop(path)
+                if not entry:
+                    continue
+                key = fname.lower()
+                if key not in apps:
+                    apps[key] = (entry['name'], path, self._load_icon(icon_theme, entry.get('icon', '')))
+
+        self._all_apps = sorted(apps.values(), key=lambda x: x[0].lower())
+        self._filtered = list(self._all_apps)
+
+    def _parse_desktop(self, path):
+        try:
+            kf = GLib.KeyFile()
+            kf.load_from_file(path, GLib.KeyFileFlags.NONE)
+            try:
+                t = kf.get_string('Desktop Entry', 'Type')
+                if t not in ('Application', 'Link'):
+                    return None
+            except Exception:
+                pass
+            try:
+                no_display = kf.get_boolean('Desktop Entry', 'NoDisplay')
+                if no_display:
+                    return None
+            except Exception:
+                pass
+            try:
+                hidden = kf.get_boolean('Desktop Entry', 'Hidden')
+                if hidden:
+                    return None
+            except Exception:
+                pass
+            name = ''
+            try:
+                name = kf.get_locale_string('Desktop Entry', 'Name', None) or ''
+            except Exception:
+                pass
+            if not name:
+                try:
+                    name = kf.get_string('Desktop Entry', 'Name')
+                except Exception:
+                    return None
+            icon = ''
+            try:
+                icon = kf.get_locale_string('Desktop Entry', 'Icon', None) or ''
+            except Exception:
+                pass
+            if not icon:
+                try:
+                    icon = kf.get_string('Desktop Entry', 'Icon')
+                except Exception:
+                    pass
+            return {'name': name.strip(), 'icon': icon.strip()}
+        except Exception:
+            return None
+
+    def _load_icon(self, icon_theme, icon_name):
+        if not icon_name:
+            return self._fallback_pixbuf(icon_theme)
+        if os.path.isabs(icon_name) and os.path.exists(icon_name):
+            try:
+                return GdkPixbuf.Pixbuf.new_from_file_at_size(icon_name, self.ICON_SIZE, self.ICON_SIZE)
+            except Exception:
+                pass
+        for size in (self.ICON_SIZE, 48, 32):
+            try:
+                pix = icon_theme.load_icon(icon_name, size, Gtk.IconLookupFlags.FORCE_SIZE)
+                if pix:
+                    return pix
+            except Exception:
+                pass
+        base = os.path.splitext(icon_name)[0]
+        if base != icon_name:
+            for size in (self.ICON_SIZE, 48, 32):
+                try:
+                    pix = icon_theme.load_icon(base, size, Gtk.IconLookupFlags.FORCE_SIZE)
+                    if pix:
+                        return pix
+                except Exception:
+                    pass
+        return self._fallback_pixbuf(icon_theme)
+
+    def _fallback_pixbuf(self, icon_theme):
+        for name in ('application-x-executable', 'application-default-icon', 'gtk-execute'):
+            try:
+                pix = icon_theme.load_icon(name, self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SIZE)
+                if pix:
+                    return pix
+            except Exception:
+                pass
+        return None
+
+
+    def _rebuild_grid(self):
+        """Vacía el FlowBox y lo repuebla con los apps filtrados."""
+        for child in list(self._flowbox.get_children()):
+            self._flowbox.remove(child)
+
+        self._selected_vbox = None
+        self._selected_path = None
+
+        if not self._filtered:
+            lbl = Gtk.Label(label=tr('app_picker_no_results'))
+            lbl.set_margin_top(20)
+            lbl.set_halign(Gtk.Align.CENTER)
+            self._flowbox.add(lbl)
+            self._flowbox.show_all()
+            return
+
+        for name, path, pixbuf in self._filtered:
+            cell = self._make_cell(name, path, pixbuf)
+            self._flowbox.add(cell)
+
+        self._flowbox.show_all()
+
+    def _make_cell(self, name, path, pixbuf):
+        """Crea una celda clickeable: icono + nombre."""
+        eb = Gtk.EventBox()
+        eb.set_visible_window(False)
+        eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        vbox.set_size_request(self.CELL_SIZE, self.CELL_SIZE + 30)
+        vbox.set_halign(Gtk.Align.CENTER)
+        vbox.set_margin_top(6)
+        vbox.set_margin_bottom(6)
+        vbox.set_margin_start(4)
+        vbox.set_margin_end(4)
+
+        if pixbuf:
+            img = Gtk.Image.new_from_pixbuf(pixbuf)
+        else:
+            img = Gtk.Image.new_from_icon_name('application-x-executable', Gtk.IconSize.DIALOG)
+        img.set_pixel_size(self.ICON_SIZE)
+        img.set_halign(Gtk.Align.CENTER)
+        vbox.pack_start(img, False, False, 0)
+
+        lbl = Gtk.Label(label=name)
+        lbl.set_max_width_chars(10)
+        lbl.set_ellipsize(3)
+        lbl.set_justify(Gtk.Justification.CENTER)
+        lbl.set_line_wrap(True)
+        lbl.set_lines(2)
+        lbl.set_halign(Gtk.Align.CENTER)
+        vbox.pack_start(lbl, False, False, 0)
+
+        eb.add(vbox)
+        eb.connect('button-press-event', self._on_cell_click, path, vbox)
+        eb.set_tooltip_text(name)
+        return eb
+
+    def _on_cell_click(self, _widget, event, path, vbox):
+        if event.button != 1:
+            return False
+        if self._selected_vbox is not None:
+            self._selected_vbox.get_style_context().remove_class('essorafm-app-picker-selected')
+        self._selected_path = path
+        self._selected_vbox = vbox
+        vbox.get_style_context().add_class('essorafm-app-picker-selected')
+        if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+            self.response(Gtk.ResponseType.OK)
+        return True
+
+
+    def _on_search_changed(self, entry):
+        query = entry.get_text().strip().lower()
+        if not query:
+            self._filtered = list(self._all_apps)
+        else:
+            self._filtered = [(n, p, px) for n, p, px in self._all_apps if query in n.lower()]
+        self._rebuild_grid()
+
+
+    def get_selected_path(self):
+        return self._selected_path
 
 
 class EssoraDesktop(Gtk.Window):
@@ -325,6 +986,7 @@ class EssoraDesktop(Gtk.Window):
         self.umount_action = "/usr/local/bin/essorafm -D '$dir'"
         self.open_command = self.desktop_settings.get('OpenCommand', 'essorafm') or 'essorafm'
         self.pymenu_command = self.desktop_settings.get('PymenuCommand', '/usr/local/bin/pymenu') or '/usr/local/bin/pymenu'
+        self.desktop_single_click = self.desktop_settings.get_bool('desktop_single_click', False)
         self.wallpaper = os.path.expanduser(self.desktop_settings.get('Wallpaper', '') or '')
         self.wallpaper_mode = self.desktop_settings.get('WallpaperMode', 'zoom') or 'zoom'
         self.wallpaper_directory = os.path.expanduser(self.desktop_settings.get('WallpaperDirectory', '/usr/share/backgrounds') or '/usr/share/backgrounds')
@@ -419,6 +1081,18 @@ class EssoraDesktop(Gtk.Window):
             border-radius: 999px;
             padding: 2px;
             border: 1px solid rgba(255, 255, 255, 0.55);
+        }}
+        .essorafm-app-picker-selected {{
+            background-color: rgba(119,150,10,0.35);
+            border-radius: 8px;
+            border: 2px solid rgba(119,150,10,0.8);
+        }}
+        .essorafm-picker-listbox row {{
+            border-radius: 6px;
+            margin: 2px 4px;
+        }}
+        .essorafm-picker-listbox row:selected {{
+            background-color: rgba(119,150,10,0.35);
         }}
         '''.encode('utf-8')
         provider = Gtk.CssProvider()
@@ -641,20 +1315,96 @@ class EssoraDesktop(Gtk.Window):
         for child in list(self.fixed.get_children()):
             self.fixed.remove(child)
 
-        x, y = 24, 24
-        max_h = (self.get_allocated_height() or 768) - self.spacing_y
-        for path in self._desktop_files():
-            icon = DesktopFileIcon(path, self)
-            self.fixed.put(icon, x, y)
-            icon.show_all()
-            y += self.spacing_y
-            if y > max_h:
-                y = 24
-                x += self.spacing_x
+        sw, sh = self._screen_size()
+        margin = 24
+
+        rows_per_col = max(1, (sh - margin) // self.step_y)
 
         all_volume_items = self.volume_service.list_sidebar_items()
         self._last_volume_signature = self.volume_service.items_signature_from_items(all_volume_items)
         drive_items = self._filtered_items(all_volume_items)
+
+        drive_cols_reserved = set()
+        if drive_items:
+            if self.xpos >= 0.5:
+                total_cols = max(1, (sw - margin) // self.step_x)
+                if self.vertical:
+                    num_drives = len(drive_items)
+                    cols_needed = max(1, (num_drives + rows_per_col - 1) // rows_per_col)
+                    for c in range(total_cols - cols_needed, total_cols):
+                        drive_cols_reserved.add(c)
+                else:
+                    drive_cols_reserved.add(total_cols - 1)
+
+        def _all_grid_positions():
+            positions = []
+            col = 0
+            while True:
+                gx = margin + col * self.step_x
+                if gx + self.cell_w > sw:
+                    break
+                if col not in drive_cols_reserved:
+                    for row in range(rows_per_col):
+                        gy = margin + row * self.step_y
+                        if gy + self.cell_h <= sh:
+                            positions.append((gx, gy))
+                col += 1
+            return positions
+
+        grid_slots = _all_grid_positions()
+
+        def _snap_to_slot(px, py):
+            """Devuelve el índice del slot de grilla más cercano a (px, py)."""
+            best_idx = 0
+            best_dist = float('inf')
+            for idx, (gx, gy) in enumerate(grid_slots):
+                d = (px - gx) ** 2 + (py - gy) ** 2
+                if d < best_dist:
+                    best_dist = d
+                    best_idx = idx
+            return best_idx
+
+        saved_pos = _load_icon_positions()
+        desktop_files = list(self._desktop_files())
+
+        occupied_slots = set()
+        icon_assignments = {}  
+
+        for path in desktop_files:
+            key = os.path.basename(path)
+            if key in saved_pos:
+                ix, iy = saved_pos[key]
+                ix = max(0, min(sw - self.cell_w, ix))
+                iy = max(0, min(sh - self.cell_h, iy))
+                icon_assignments[path] = (ix, iy)
+                if grid_slots:
+                    occupied_slots.add(_snap_to_slot(ix, iy))
+
+
+        free_slots = [i for i in range(len(grid_slots)) if i not in occupied_slots]
+        free_idx = 0
+        for path in desktop_files:
+            if path not in icon_assignments:
+                if free_idx < len(free_slots):
+                    slot = free_slots[free_idx]
+                    free_idx += 1
+                    icon_assignments[path] = grid_slots[slot]
+                else:
+
+                    if grid_slots:
+                        lx, ly = grid_slots[-1]
+                        icon_assignments[path] = (lx, ly + self.step_y * (free_idx - len(free_slots) + 1))
+                    else:
+                        icon_assignments[path] = (margin, margin)
+                    free_idx += 1
+
+
+        for path in desktop_files:
+            icon = DesktopFileIcon(path, self)
+            ix, iy = icon_assignments.get(path, (margin, margin))
+            self.fixed.put(icon, int(ix), int(iy))
+            icon.show_all()
+
         if self.reverse_pack:
             drive_items = list(reversed(drive_items))
         for idx, item in enumerate(drive_items):
@@ -722,10 +1472,30 @@ class EssoraDesktop(Gtk.Window):
         menu.popup_at_pointer(event)
 
     def _remove_desktop_icon(self, path):
+        """Elimina un icono/archivo/carpeta/symlink del escritorio.
+
+        - Symlinks (a carpetas o archivos): se elimina solo el symlink, nunca el target.
+        - Archivos normales: se eliminan directamente.
+        - Carpetas reales (no symlinks): se eliminan con shutil.rmtree solo si
+          están dentro del directorio de escritorio, para no comprometer carpetas
+          del sistema ni del home fuera del escritorio.
+        """
         try:
-            if os.path.isdir(path):
-                self._error(tr('remove_desktop_icon_folder_warning'))
+            if os.path.islink(path):
+                os.unlink(path)
+                self.refresh()
                 return
+
+            if os.path.isdir(path):
+                desktop_dir = os.path.realpath(self.desktop_dir)
+                real_path   = os.path.realpath(path)
+                if os.path.dirname(real_path) == desktop_dir:
+                    shutil.rmtree(path)
+                    self.refresh()
+                else:
+                    self._error(tr('remove_desktop_icon_folder_warning'))
+                return
+
             os.remove(path)
             self.refresh()
         except Exception as exc:
@@ -794,9 +1564,12 @@ class EssoraDesktop(Gtk.Window):
         change_wallpaper = Gtk.MenuItem(label=tr('change_wallpaper'))
         change_wallpaper.connect('activate', lambda *_: self.choose_wallpaper())
         menu.append(change_wallpaper)
-        add_icon = Gtk.MenuItem(label=tr('add_desktop_icon'))
+        add_icon = Gtk.MenuItem(label=tr('add_app_or_icon'))
         add_icon.connect('activate', lambda *_: self.add_icon_to_desktop())
         menu.append(add_icon)
+        layout_item = Gtk.MenuItem(label=tr('desktop_icon_layout'))
+        layout_item.connect('activate', lambda *_: self._show_layout_dialog())
+        menu.append(layout_item)
         refresh_item = Gtk.MenuItem(label=tr('refresh'))
         refresh_item.connect('activate', lambda *_: self.refresh())
         menu.append(refresh_item)
@@ -805,6 +1578,145 @@ class EssoraDesktop(Gtk.Window):
             menu.popup_at_pointer(event)
         else:
             menu.popup(None, None, None, None, 0, Gtk.get_current_event_time())
+
+    def _show_layout_dialog(self):
+        """Diálogo liviano con sliders para espaciado y tamaño de icono.
+
+        Aplica los cambios en vivo mientras el usuario mueve los sliders y
+        guarda al presionar Aplicar / cerrar con OK.  Cancelar restaura los
+        valores anteriores.
+        """
+
+        orig = {
+            'SpacingX':              self.desktop_settings.get_int('SpacingX', 112),
+            'SpacingY':              self.desktop_settings.get_int('SpacingY', 112),
+            'desktop_drive_icon_size': self.desktop_settings.get_int('desktop_drive_icon_size', 48),
+        }
+        DEFAULTS = {'SpacingX': 112, 'SpacingY': 112, 'desktop_drive_icon_size': 48}
+
+        dialog = Gtk.Dialog(
+            title=tr('desktop_layout_title'),
+            transient_for=self,
+            modal=True,
+            use_header_bar=0,
+        )
+        dialog.set_default_size(420, 0)
+        dialog.set_resizable(False)
+        dialog.add_buttons(
+            tr('cancel'),                Gtk.ResponseType.CANCEL,
+            tr('desktop_layout_apply'),  Gtk.ResponseType.OK,
+        )
+
+        reset_btn = dialog.add_button(tr('desktop_layout_reset'), Gtk.ResponseType.REJECT)
+        reset_btn.get_style_context().add_class('destructive-action')
+
+        action_area = dialog.get_action_area()
+        action_area.set_child_secondary(reset_btn, True)
+
+        content = dialog.get_content_area()
+        content.set_spacing(0)
+
+        grid = Gtk.Grid()
+        grid.set_column_spacing(16)
+        grid.set_row_spacing(14)
+        grid.set_margin_start(20)
+        grid.set_margin_end(20)
+        grid.set_margin_top(16)
+        grid.set_margin_bottom(16)
+        content.pack_start(grid, True, True, 0)
+
+        def _make_row(label_text, key, min_val, max_val, step, row_idx):
+            """Crea una fila: etiqueta | slider | valor en px."""
+            lbl = Gtk.Label(label=label_text, xalign=0)
+            lbl.get_style_context().add_class('dim-label')
+            grid.attach(lbl, 0, row_idx, 1, 1)
+
+            adj = Gtk.Adjustment(
+                value=self.desktop_settings.get_int(key, DEFAULTS[key]),
+                lower=min_val, upper=max_val,
+                step_increment=step, page_increment=step * 4,
+            )
+            scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
+            scale.set_hexpand(True)
+            scale.set_draw_value(False)
+            scale.set_round_digits(0)
+
+            for mark in range(min_val, max_val + 1, step * 4):
+                scale.add_mark(mark, Gtk.PositionType.BOTTOM, None)
+            grid.attach(scale, 1, row_idx, 1, 1)
+
+            val_lbl = Gtk.Label(label=f'{int(adj.get_value())} {tr("desktop_layout_px")}')
+            val_lbl.set_width_chars(7)
+            val_lbl.set_xalign(1)
+            grid.attach(val_lbl, 2, row_idx, 1, 1)
+
+            def _on_value_changed(adj, vl=val_lbl, k=key):
+                v = int(adj.get_value())
+                vl.set_text(f'{v} {tr("desktop_layout_px")}')
+                self.desktop_settings.update({k: str(v)})
+                self.refresh()
+
+            adj.connect('value-changed', _on_value_changed)
+            return adj
+
+        adj_size = _make_row(
+            tr('desktop_layout_icon_size'), 'desktop_drive_icon_size',
+            min_val=24, max_val=96, step=8, row_idx=0,
+        )
+
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        sep.set_margin_top(4)
+        sep.set_margin_bottom(4)
+        grid.attach(sep, 0, 1, 3, 1)
+
+        adj_sx = _make_row(
+            tr('desktop_layout_spacing_h'), 'SpacingX',
+            min_val=80, max_val=240, step=8, row_idx=2,
+        )
+        adj_sy = _make_row(
+            tr('desktop_layout_spacing_v'), 'SpacingY',
+            min_val=80, max_val=240, step=8, row_idx=3,
+        )
+
+        content.show_all()
+
+        def _apply_all():
+            self.desktop_settings.update({
+                'desktop_drive_icon_size': str(int(adj_size.get_value())),
+                'SpacingX': str(int(adj_sx.get_value())),
+                'SpacingY': str(int(adj_sy.get_value())),
+            })
+            self.refresh()
+
+        def _reset_all():
+            adj_size.set_value(DEFAULTS['desktop_drive_icon_size'])
+            adj_sx.set_value(DEFAULTS['SpacingX'])
+            adj_sy.set_value(DEFAULTS['SpacingY'])
+            _apply_all()
+
+        response = None
+
+        def _on_response(dlg, resp):
+            nonlocal response
+            response = resp
+
+        dialog.connect('response', _on_response)
+
+        dialog.connect('response', lambda dlg, resp: _reset_all() if resp == Gtk.ResponseType.REJECT else None)
+
+        while True:
+            resp = dialog.run()
+            if resp == Gtk.ResponseType.REJECT:
+                continue
+            break
+
+        if resp == Gtk.ResponseType.OK:
+            _apply_all()
+        else:
+            self.desktop_settings.update({k: str(v) for k, v in orig.items()})
+            self.refresh()
+
+        dialog.destroy()
 
     def launch_pymenu(self):
         try:
@@ -838,30 +1750,32 @@ class EssoraDesktop(Gtk.Window):
         dialog.destroy()
 
     def add_icon_to_desktop(self):
-        dialog = Gtk.FileChooserDialog(title=tr('add_desktop_icon'), parent=self, action=Gtk.FileChooserAction.OPEN,
-                                       buttons=(tr('cancel'), Gtk.ResponseType.CANCEL, tr('open'), Gtk.ResponseType.OK))
-        if os.path.isdir('/usr/share/applications'):
-            dialog.set_current_folder('/usr/share/applications')
-        if dialog.run() == Gtk.ResponseType.OK:
-            src = dialog.get_filename()
-            try:
-                os.makedirs(self.desktop_dir, exist_ok=True)
-                dest = os.path.join(self.desktop_dir, os.path.basename(src))
-                if os.path.exists(dest):
-                    base, ext = os.path.splitext(dest)
-                    i = 1
-                    while os.path.exists(f'{base}-{i}{ext}'):
-                        i += 1
-                    dest = f'{base}-{i}{ext}'
-                if src.endswith('.desktop'):
-                    self._write_link_desktop(src, dest)
-                else:
-                    shutil.copy2(src, dest)
-                if dest.endswith('.desktop'):
-                    os.chmod(dest, os.stat(dest).st_mode | 0o755)
-                self.refresh()
-            except Exception as exc:
-                self._error(str(exc))
+        dialog = AppPickerDialog(parent=self)
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            src = dialog.get_selected_path()
+            if src:
+                try:
+                    os.makedirs(self.desktop_dir, exist_ok=True)
+                    dest_name = os.path.basename(src.rstrip('/'))
+                    dest = os.path.join(self.desktop_dir, dest_name)
+                    if os.path.exists(dest) or os.path.islink(dest):
+                        base, ext = os.path.splitext(dest)
+                        i = 1
+                        while os.path.exists(f'{base}-{i}{ext}') or os.path.islink(f'{base}-{i}{ext}'):
+                            i += 1
+                        dest = f'{base}-{i}{ext}'
+                    if os.path.isdir(src) and not src.endswith('.desktop'):
+                        os.symlink(src, dest)
+                    elif src.endswith('.desktop'):
+                        self._write_link_desktop(src, dest)
+                    else:
+                        shutil.copy2(src, dest)
+                    if dest.endswith('.desktop'):
+                        os.chmod(dest, os.stat(dest).st_mode | 0o755)
+                    self.refresh()
+                except Exception as exc:
+                    self._error(str(exc))
         dialog.destroy()
 
     def _write_link_desktop(self, source_desktop, dest_path):
@@ -1018,6 +1932,7 @@ class EssoraDesktop(Gtk.Window):
             'UMountAction': tr('desktop_umount_action'),
             'PymenuCommand': tr('desktop_pymenu_command'),
             'WallpaperDirectory': tr('desktop_wallpaper_directory'),
+            'desktop_single_click': tr('desktop_open_single_click'),
         }
         value = labels.get(key, key)
         return value if value != key else key
@@ -1060,6 +1975,22 @@ class EssoraDesktop(Gtk.Window):
             checks[key] = chk
             grid.attach(chk, 0, row, 2, 1)
             row += 1
+
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        sep.set_margin_top(6)
+        sep.set_margin_bottom(2)
+        grid.attach(sep, 0, row, 2, 1)
+        row += 1
+        click_label = Gtk.Label(label=tr('desktop_click_section'), xalign=0)
+        click_label.get_style_context().add_class('dim-label')
+        grid.attach(click_label, 0, row, 2, 1)
+        row += 1
+        chk_sc = Gtk.CheckButton(label=tr('desktop_open_single_click'))
+        chk_sc.set_active(self.desktop_settings.get_bool('desktop_single_click', False))
+        chk_sc.set_tooltip_text(tr('desktop_open_single_click'))
+        checks['desktop_single_click'] = chk_sc
+        grid.attach(chk_sc, 0, row, 2, 1)
+        row += 1
 
         grid.attach(Gtk.Label(label=tr('desktop_orientation'), xalign=0), 0, row, 1, 1)
         orientation_combo = Gtk.ComboBoxText()

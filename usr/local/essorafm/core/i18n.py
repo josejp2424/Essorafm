@@ -68,7 +68,7 @@ STRINGS = {
         'autostart_enabled': 'Desktop icons autostart enabled',
         'autostart_disabled': 'Desktop icons autostart disabled',
         'autostart_error': 'Autostart error:', 'mount': 'Mount', 'unmount': 'Unmount', 'eject': 'Eject', 'mounting_volume': 'Mounting volume...', 'mounted_ok': 'Volume mounted', 'mounted_fail': 'Could not mount volume', 'unmounted_ok': 'Unmounted', 'unmounted_fail': 'Could not unmount', 'ejected_ok': 'Ejected', 'ejected_fail': 'Could not eject', 'not_mounted': 'Not mounted', 'desktop_mode': 'Desktop mode', 'applications': 'Applications', 'change_wallpaper': 'Change wallpaper', 'add_desktop_icon': 'Add icon to desktop', 'remove_desktop_icon': 'Remove desktop icon', 'remove_desktop_icon_folder_warning': 'Folders must be removed from the file manager.', 'net_section': 'Network', 'net_add': '+ Add connection', 'net_add_connection': 'Add network connection', 'net_edit_connection': 'Edit connection', 'net_type': 'Type:', 'net_server': 'Server:', 'net_port': 'Port:', 'net_share': 'Folder / share:', 'net_user': 'Username:', 'net_password': 'Password', 'net_name': 'Bookmark name:', 'net_name_hint': 'My server', 'net_optional': 'optional', 'net_anonymous': 'anonymous', 'net_connect': 'Connect', 'net_disconnect': 'Disconnect', 'net_edit': 'Edit...', 'net_remove': 'Remove', 'net_remove_confirm': 'Remove bookmark', 'net_connecting': 'Connecting to', 'net_connected': 'Connection established', 'net_disconnecting': 'Disconnecting', 'net_disconnected': 'Disconnected', 'net_error': 'Network error', 'net_invalid_uri': 'Invalid address', 'net_password_for': 'Password for', 'connect': 'Connect',
-        # Nuevas traducciones para favoritos
+
         'quick_access': 'Quick access',
         'places': 'Places',
         'devices': 'Devices',
@@ -99,7 +99,7 @@ STRINGS = {
         'sidebar_layout_top_bar': 'Compact (top bar)',
         'preview_enabled': 'Show preview panel',
         'cant_close_last_tab': 'Cannot close the last tab',
-        # Traducciones para barra de estado
+
         'folder': 'Folder',
         'folders': 'folders',
         'file': 'File',
@@ -168,7 +168,7 @@ base_es = {
     'autostart_enabled': 'Autostart de iconos habilitado',
     'autostart_disabled': 'Autostart de iconos deshabilitado',
     'autostart_error': 'Error de autostart:',
-    # Nuevas traducciones para favoritos en español
+
     'quick_access': 'Accesos rápidos',
     'places': 'Lugares',
     'devices': 'Dispositivos',
@@ -199,7 +199,7 @@ base_es = {
     'sidebar_layout_top_bar': 'Compacto (barra arriba)',
     'preview_enabled': 'Mostrar panel de vista previa',
     'cant_close_last_tab': 'No se puede cerrar la última pestaña',
-    # Traducciones para barra de estado en español
+
     'folder': 'Carpeta',
     'folders': 'carpetas',
     'file': 'Archivo',
@@ -236,6 +236,23 @@ for code, up in updates.items():
 
 
 EXTRA_DESKTOP_STRINGS_EN = {
+
+    'add_app_or_icon': 'Send to desktop',
+    'app_picker_title': 'Send to desktop',
+    'app_picker_search': 'Search...',
+    'app_picker_all': 'All',
+    'app_picker_no_results': 'No items found',
+    'add_selected': 'Send to desktop',
+    'picker_tab_apps': 'Applications',
+    'picker_tab_files': 'Files',
+    'picker_tab_folders': 'Folders',
+    'picker_common_files': 'Common files',
+    'picker_common_folders': 'Common folders',
+    'picker_browse_file': 'Browse file...',
+    'picker_browse_folder': 'Browse folder...',
+
+    'desktop_click_section': 'Desktop click behavior',
+    'desktop_open_single_click': 'Open desktop icons with a single click',
     'desktop_drive_show_internal': 'Show internal drives',
     'desktop_drive_show_removable': 'Show removable drives',
     'desktop_drive_show_network': 'Show network drives',
@@ -256,6 +273,14 @@ EXTRA_DESKTOP_STRINGS_EN = {
     'desktop_spacing_x': 'Horizontal spacing',
     'desktop_spacing_y': 'Vertical spacing',
     'desktop_label_width': 'Label width',
+    'desktop_icon_layout': 'Icon layout…',
+    'desktop_layout_title': 'Desktop icon layout',
+    'desktop_layout_icon_size': 'Icon size',
+    'desktop_layout_spacing_h': 'Horizontal spacing',
+    'desktop_layout_spacing_v': 'Vertical spacing',
+    'desktop_layout_reset': 'Reset defaults',
+    'desktop_layout_apply': 'Apply',
+    'desktop_layout_px': 'px',
     'desktop_font_color': 'Font color',
     'desktop_shadow_color': 'Shadow color',
     'desktop_mount_action': 'Open action (locked)',
@@ -269,6 +294,23 @@ EXTRA_DESKTOP_STRINGS_EN = {
 }
 
 EXTRA_DESKTOP_STRINGS_ES = {
+
+    'add_app_or_icon': 'Enviar al escritorio',
+    'app_picker_title': 'Enviar al escritorio',
+    'app_picker_search': 'Buscar...',
+    'app_picker_all': 'Todas',
+    'app_picker_no_results': 'No se encontraron elementos',
+    'add_selected': 'Enviar al escritorio',
+    'picker_tab_apps': 'Aplicaciones',
+    'picker_tab_files': 'Archivos',
+    'picker_tab_folders': 'Carpetas',
+    'picker_common_files': 'Archivos comunes',
+    'picker_common_folders': 'Carpetas comunes',
+    'picker_browse_file': 'Examinar archivo...',
+    'picker_browse_folder': 'Examinar carpeta...',
+
+    'desktop_click_section': 'Comportamiento de clics en el escritorio',
+    'desktop_open_single_click': 'Abrir iconos del escritorio con un solo clic',
     'desktop_drive_show_internal': 'Mostrar unidades internas',
     'desktop_drive_show_removable': 'Mostrar unidades extraíbles',
     'desktop_drive_show_network': 'Mostrar unidades de red',
@@ -289,6 +331,14 @@ EXTRA_DESKTOP_STRINGS_ES = {
     'desktop_spacing_x': 'Espaciado horizontal',
     'desktop_spacing_y': 'Espaciado vertical',
     'desktop_label_width': 'Ancho de etiqueta',
+    'desktop_icon_layout': 'Disposición de iconos…',
+    'desktop_layout_title': 'Disposición de iconos del escritorio',
+    'desktop_layout_icon_size': 'Tamaño de icono',
+    'desktop_layout_spacing_h': 'Espaciado horizontal',
+    'desktop_layout_spacing_v': 'Espaciado vertical',
+    'desktop_layout_reset': 'Restaurar valores',
+    'desktop_layout_apply': 'Aplicar',
+    'desktop_layout_px': 'px',
     'desktop_font_color': 'Color de fuente',
     'desktop_shadow_color': 'Color de sombra',
     'desktop_mount_action': 'Acción de abrir (bloqueada)',
@@ -307,7 +357,7 @@ for _code in ['ca', 'de', 'fr', 'it', 'pt', 'hu', 'ja', 'ru', 'zh', 'ar']:
     STRINGS[_code].update(EXTRA_DESKTOP_STRINGS_ES)
 
 
-# === GitHub / GitGUI integration ===
+
 GITHUB_STRINGS = {
     'en': {
         'github_entry': 'GitHub',
@@ -456,7 +506,7 @@ for _code, _label in TOOLBAR_FLAT_STRINGS.items():
         STRINGS[_code]['toolbar_style_icons_flat'] = _label
 
 
-# === Theme tab in Preferences ===
+
 THEME_TAB_STRINGS = {
     'en': {
         'themes_tab': 'Themes',
@@ -633,7 +683,7 @@ for _code, _strings in THEME_TAB_STRINGS.items():
         STRINGS[_code].update(_strings)
 
 
-# === Bar position / order options ===
+
 BAR_POSITION_STRINGS = {
     'en': {
         'toolbar_first':         'Bar order',
@@ -739,7 +789,7 @@ for _code, _strings in BAR_POSITION_STRINGS.items():
 
 
 
-# === Hardcoded strings rescued from various services (volumes, trash, network) ===
+
 HARDCODED_FIX_STRINGS = {
     'en': {
         'net_no_mount_tool': 'No mounting tool found.\nInstall: rclone, sshfs, curlftpfs or mount.cifs',
