@@ -1,7 +1,0 @@
-essora-desktop-drive-icons fork:
-https://github.com/josejp2424/essora-desktop-drive-icons
-
-Original upstream:
-https://github.com/01micko/desktop-drive-icons
-
-This component is distributed separately under GPL-3.0.

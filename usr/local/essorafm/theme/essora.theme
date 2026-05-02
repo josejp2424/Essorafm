@@ -1,0 +1,118 @@
+[Theme]
+Id = essora
+Name = Essora
+Name[es] = Essora
+Name[ca] = Essora
+Name[de] = Essora
+Name[fr] = Essora
+Name[it] = Essora
+Name[pt] = Essora
+Name[hu] = Essora
+Name[ja] = エッソラ
+Name[ru] = Эссора
+Name[zh] = Essora
+Name[ar] = إسورا
+Description = Official Essora Linux theme — olive green accent on dark gray
+Description[es] = Tema oficial de Essora Linux — acento verde oliva sobre gris oscuro
+Description[ca] = Tema oficial d'Essora Linux — accent verd oliva sobre gris fosc
+Description[de] = Offizielles Essora-Linux-Thema — Olivgrüner Akzent auf dunklem Grau
+Description[fr] = Thème officiel d'Essora Linux — accent vert olive sur gris foncé
+Description[it] = Tema ufficiale di Essora Linux — accento verde oliva su grigio scuro
+Description[pt] = Tema oficial do Essora Linux — acento verde oliva em cinza escuro
+Description[hu] = Az Essora Linux hivatalos témája — olívazöld kiemelés sötétszürkén
+Description[ja] = Essora Linux 公式テーマ — ダークグレー上のオリーブグリーンのアクセント
+Description[ru] = Официальная тема Essora Linux — оливково-зелёный акцент на тёмно-сером
+Description[zh] = Essora Linux 官方主题 — 深灰底搭配橄榄绿强调色
+Description[ar] = سمة Essora Linux الرسمية — لمسة خضراء زيتونية على رمادي داكن
+Author = josejp2424
+Version = 1.0
+Emoji = 🌿
+
+[CSS]
+Code =
+    /* Essora official theme: #1F2228 background + #77960A accent */
+    window, .essorafm-root { background-color: #1F2228; color: #ffffff; }
+
+    headerbar {
+        background-color: #191b20;
+        border-bottom: 2px solid #77960A;
+        color: #ffffff;
+    }
+    headerbar button { color: #ffffff; }
+    headerbar button:hover { background-color: #2a2e36; }
+
+    .essorafm-sidebar-box,
+    .essorafm-sidebar,
+    .essorafm-sidebar-tree {
+        background-color: #191b20;
+    }
+    .essorafm-sidebar-tree.view {
+        background-color: #191b20;
+        color: #c8d4a8;
+    }
+    .essorafm-sidebar-tree.view:hover {
+        background-color: #2a2e36;
+    }
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #77960A;
+        color: #ffffff;
+    }
+
+    .essorafm-content,
+    .essorafm-toolbar {
+        background-color: #1F2228;
+    }
+
+    treeview.view {
+        background-color: #1F2228;
+        color: #ffffff;
+    }
+    treeview.view:selected,
+    treeview.view:selected:focus {
+        background-color: #77960A;
+        color: #ffffff;
+    }
+
+    .essorafm-tabs { background-color: #1F2228; }
+    .essorafm-tabs tab {
+        background-color: #191b20;
+        color: #c8d4a8;
+        border-radius: 10px 10px 0 0;
+    }
+    .essorafm-tabs tab:hover {
+        background-color: #2a2e36;
+        color: #ffffff;
+    }
+    .essorafm-tabs tab:checked {
+        background-color: #2a2e36;
+        color: #ffffff;
+        box-shadow: 0 -2px 0 0 #77960A;
+    }
+
+    .essorafm-toolbutton:hover {
+        background-color: #2a2e36;
+    }
+
+    entry {
+        background-color: #2a2e36;
+        color: #ffffff;
+        border: 1px solid #353a44;
+    }
+    entry:focus {
+        border-color: #77960A;
+    }
+
+    button {
+        background-color: #2a2e36;
+        color: #ffffff;
+        border: 1px solid #353a44;
+    }
+    button:hover {
+        background-color: #353a44;
+        border-color: #77960A;
+    }
+    button:active {
+        background-color: #77960A;
+        color: #ffffff;
+    }

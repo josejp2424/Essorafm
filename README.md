@@ -7,7 +7,7 @@
 **Modular GTK3 file manager for Essora Linux**
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.11-green.svg)](https://github.com/josejp2424/essorafm/releases)
+[![Version](https://img.shields.io/badge/version-0.4.21-green.svg)](https://github.com/josejp2424/essorafm/releases)
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)]()
 [![Built with](https://img.shields.io/badge/built%20with-Python%203%20%2B%20GTK3-yellow.svg)]()
 [![Init: OpenRC](https://img.shields.io/badge/init-OpenRC%20friendly-orange.svg)]()
@@ -27,6 +27,8 @@ A lightweight, init-system-agnostic file manager designed for [Essora Linux](htt
 - [Usage](#usage)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Configuration](#configuration)
+- [Themes](#themes)
+- [GitHub integration (GitGUI)](#github-integration-gitgui)
 - [Architecture](#architecture)
 - [Internationalization](#internationalization)
 - [Privilege escalation](#privilege-escalation)
@@ -42,11 +44,12 @@ A lightweight, init-system-agnostic file manager designed for [Essora Linux](htt
 
 ### Core navigation
 - **Tabbed browsing** with closable tabs and `Ctrl+T` / `Ctrl+W` shortcuts.
-- **Sidebar with bookmarks**: Home, Desktop, Documents, Downloads, Filesystem, Trash, plus auto-detected mounted volumes.
+- **Sidebar with sections**: Quick access (favorites), Places (Home, Desktop, Documents, Downloads, Filesystem, Trash), Devices (auto-detected mounted volumes), and Network (SMB/FTP/SFTP/WebDAV bookmarks plus a built-in GitHub entry).
 - **Path bar** with integrated search.
-- **Mount, unmount and eject** removable volumes via `udisks2`.
+- **Multi-backend mount/unmount** for removable volumes, with automatic fallback through `udisksctl` → `gio mount` → `pkexec mount`.
 - **Two view modes**: icons (grid) and list (with name, size, modified columns).
 - **Hidden files toggle**: toolbar button, `Ctrl+H`, or context menu.
+- **Configurable bar order and position**: choose whether toolbar sits above or below the address/search bar, and whether the whole bar block sits above or below the file area.
 
 ### File operations
 - **Copy, paste, move to trash, restore, delete permanently** — all standard operations.
@@ -72,11 +75,25 @@ Built-in duplicate file finder accessible from the toolbar and right-click menu.
 ### Network bookmarks
 Connect to SMB, FTP, SFTP and WebDAV shares. Bookmarks are stored locally and reconnected on demand from the sidebar.
 
-### Desktop integration (optional)
-- Show drive icons on the desktop (uses `essora-desktop-drive-icons`, forked from [01micko/desktop-drive-icons](https://github.com/01micko/desktop-drive-icons)).
-- Configurable autostart, drive icon size, and what types to show (internal / removable / network).
-- Send images to `/usr/share/backgrounds` directly from the context menu.
-- Run files in a console with one click.
+### Built-in desktop (`essorafm --desktop`)
+EssoraFM includes its **own integrated desktop renderer** — no external dependencies required, the whole logic lives in `app/desktop.py`. It draws drive icons and `.desktop` shortcuts directly from the user's XDG Desktop folder, manages the wallpaper, and handles right-click menus for changing wallpaper, adding icons, and refreshing.
+
+- **Mount-state visual feedback**: unmounted drives render at 50% opacity, mounted drives at 100%.
+- **Eject badge**: a small clickable `media-eject` icon appears in the corner of mounted drive icons. Clicking it unmounts the drive without opening it.
+- **`Add icon to desktop`** writes a clean `Type=Link` wrapper that delegates to the source `.desktop` (no more 80+ lines of `Name[xx]=` translations being copied to the desktop).
+- **Wallpaper carousel**: pressing *Change wallpaper* opens a borderless modal showing thumbnails of every supported image (JPG, PNG, WEBP, BMP, TIFF, **SVG**) from the configured wallpaper directory. The selected image previews enlarged at the center, with the surrounding thumbnails scaling down progressively. Replaces the previous plain `Gtk.FileChooserDialog`.
+- **Configurable**: drive icon size, label width and lines, font and shadow color, what types to show (internal / removable / network).
+- **Send images to `/usr/share/backgrounds`** directly from the file manager's context menu.
+- **Run files in a console** with one click.
+
+### XDG-aware folder handling
+EssoraFM resolves the user's standard folders (Desktop, Documents, Downloads, Pictures, Music, Videos) through `GLib.get_user_special_dir()`, which reads `~/.config/user-dirs.dirs`. This means it works correctly in any system language — `~/Descargas`, `~/Téléchargements`, `~/ダウンロード`, etc. — without hardcoding name lists. The sidebar Places section, the per-tab folder icon, and the `--desktop` mode all share this resolution.
+
+### Themes
+EssoraFM ships with seven themes, including the official **🌿 Essora** theme (olive green `#77960A` accent on dark gray `#1F2228`). Themes live as standalone `.theme` files in `/usr/local/essorafm/theme/` — drop a new file there and it appears automatically in Preferences. See [Themes](#themes) below.
+
+### GitHub integration (GitGUI)
+A clickable **GitHub** entry in the sidebar's Network section opens **GitGUI**, an embedded Git configuration tool that lives entirely under `/usr/local/essorafm/gitgui/`. It handles `git config --global` setup, SSH key generation for GitHub, and basic `clone` / `pull` / `push` actions — all running under the user's home, never as root. If `git` is not installed when launching, EssoraFM shows a localized dialog with the install command instead of opening a broken UI.
 
 ### Configurable interface
 Persistent across sessions via `~/.config/essorafm/config.ini`:
@@ -88,11 +105,15 @@ Persistent across sessions via `~/.config/essorafm/config.ini`:
 - Show thumbnails (image previews in icon view).
 - Window size — three presets (`640×480`, `880×550`, `1040×680`) and a fully custom width × height range (640–3840 × 480–2160).
 - Sidebar layout (classic / compact).
+- Bar order (toolbar above pathbar, or pathbar above toolbar).
+- Bar block position (above or below the file content).
 - Sort field (name / size / modified / type) and direction.
-- Toolbar style (icons only / text below / text right).
+- Toolbar style (icons only, icons only flat, text below, text right).
+- Application theme (any `.theme` file in `/usr/local/essorafm/theme/`).
+- Rounded corners, card style, glassmorphism toggles.
 
 ### Internationalization
-Full UI translations for **12 languages**: English, Spanish, Catalan, German, French, Italian, Portuguese, Hungarian, Japanese, Russian, Chinese, Arabic. Language is auto-detected from `$LANG` / system locale.
+Full UI translations for **12 languages**: English, Spanish, Catalan, German, French, Italian, Portuguese, Hungarian, Japanese, Russian, Chinese, Arabic. Language is auto-detected from `$LANG` / system locale. The current build ships **274 translation keys per language**.
 
 ---
 
@@ -131,6 +152,12 @@ Full UI translations for **12 languages**: English, Spanish, Catalan, German, Fr
 <sub><b>About</b></sub>
 </td>
 </tr>
+<tr>
+<td align="center" colspan="2">
+<img src="assets/wallpaper.png" alt="Wallpaper carousel"><br>
+<sub><b>Wallpaper carousel (<code>essorafm --desktop</code> → right-click → Change wallpaper)</b></sub>
+</td>
+</tr>
 </table>
 
 </div>
@@ -148,12 +175,19 @@ Full UI translations for **12 languages**: English, Spanish, Catalan, German, Fr
 - `gir1.2-glib-2.0`
 - `gir1.2-pango-1.0`
 - `udisks2`
+- `samba` — required for SMB bookmarks
+- `poppler-utils` — required for PDF previews
+- `rclone` — used by the network mount fallback chain
+
+### Recommended (not required)
+- `git` — for GitGUI integration. EssoraFM detects its absence at launch and shows a localized prompt instead of failing.
+- `openssh-client` — for GitGUI's SSH key generation tab.
 
 ### Optional dependencies
 - `rsync` — accelerated copying with progress.
-- `poppler-utils` — PDF thumbnails and previews (`pdftoppm`).
 - `policykit-1` *or* `gksu` — privilege escalation for system-protected operations.
 - `xdg-utils` — `xdg-open` fallback for "Open with default application".
+- `librsvg` — provides SVG rendering for `GdkPixbuf` (already pulled in by GTK on Debian/Devuan). Without it, SVG wallpapers are skipped silently.
 
 ### Tested on
 - Essora Linux (Devuan Excalibur base, OpenRC)
@@ -171,15 +205,17 @@ EssoraFM has **no systemd dependency**, so it runs equally well on systemd, Open
 Download the latest release from [Releases](https://github.com/josejp2424/essorafm/releases) or [SourceForge](https://sourceforge.net/projects/essora/) and install:
 
 ```bash
-sudo dpkg -i essorafm_0.4.11-1_amd64.deb
+sudo dpkg -i essorafm_0.4.21-3_amd64.deb
 sudo apt-get install -f   # resolve dependencies if needed
 ```
+
+The `postinst` script seeds default config files into every real user's `~/.config/essorafm/` directory. Files that already exist are never overwritten — personal settings are preserved across upgrades.
 
 ### Option 2 — From the tar archive
 
 ```bash
-tar -xzf essorafm-0_4_11-1_amd64_tar.gz
-cd essorafm-0.4.11-1_amd64
+tar -xzf essorafm-0_4_21-3_amd64_tar.gz
+cd essorafm-0.4.21-3_amd64
 sudo cp -rv usr/* /usr/
 
 # Clean any old bytecode cache (important when upgrading)
@@ -208,6 +244,7 @@ essorafm --version 2>/dev/null || essorafm
 sudo rm -rf /usr/local/essorafm
 sudo rm -f /usr/local/bin/essorafm
 sudo rm -f /usr/share/applications/essorafm.desktop
+sudo rm -f /usr/share/applications/essorafm-desktop.desktop
 ```
 
 User config at `~/.config/essorafm/` is preserved unless removed manually.
@@ -220,6 +257,8 @@ User config at `~/.config/essorafm/` is preserved unless removed manually.
 - From the application menu: *System → EssoraFM*
 - From a terminal: `essorafm`
 - With a starting path: `essorafm /home/user/Pictures`
+- As a desktop renderer: `essorafm --desktop` (replaces the desktop wallpaper and renders drive icons + shortcuts)
+- To unmount a path from the command line: `essorafm -D /media/user/disk`
 
 ### Right-click menu
 On any file or folder you get:
@@ -275,6 +314,8 @@ preview_enabled = true
 window_width = 880
 window_height = 550
 sidebar_layout = classic
+toolbar_first = true
+bars_position = top
 sort_field = name
 sort_direction = asc
 desktop_drive_icons = true
@@ -282,6 +323,10 @@ desktop_drive_icon_size = 48
 desktop_drive_show_internal = true
 desktop_drive_show_removable = true
 desktop_drive_show_network = false
+app_theme = default
+theme_rounded = true
+theme_cards = false
+theme_glass = false
 ```
 
 The file is created automatically on first run with sane defaults. All UI preferences are mirrored into it on save.
@@ -294,48 +339,130 @@ Network bookmarks are stored in:
 
 ---
 
+## Themes
+
+Themes are standalone INI files in `/usr/local/essorafm/theme/`. EssoraFM scans this folder at startup and exposes every `.theme` file in the Preferences combo. Two IDs are reserved (`default` and `gtk_system`) and handled internally.
+
+### Bundled themes
+
+| ID            | Display name      | Palette                                     |
+| ------------- | ----------------- | ------------------------------------------- |
+| `default`     | Default (dark)    | `#242424` background, olive green accent    |
+| `gtk_system`  | System GTK theme  | Whatever GTK theme is installed system-wide |
+| `essora`      | 🌿 Essora         | `#1F2228` + `#77960A` — official Essora     |
+| `neon_cyber`  | ⚡ Neon Cyber     | `#050a0f` + electric blue `#00d4ff`         |
+| `aurora`      | 🌌 Aurora         | `#0d0618` + violet `#7c3aed`                |
+| `carbon`      | 🖤 Carbon         | `#1a1a1a` + silver `#9ca3af`                |
+| `ocean_deep`  | 🌊 Ocean Deep     | `#0a1628` + cyan `#00b4d8`                  |
+| `ember`       | 🔥 Ember          | `#0f0a06` + orange `#ff6b35`                |
+
+### File format
+
+Each theme is an INI file with a `[Theme]` metadata section and a `[CSS]` section:
+
+```ini
+[Theme]
+Id = my_theme
+Name = My theme
+Name[es] = Mi tema
+Name[ja] = マイテーマ
+Description = Soft pastel palette
+Description[es] = Paleta de pastel suave
+Author = your-name
+Version = 1.0
+Emoji = 🎨
+
+[CSS]
+Code =
+    window, .essorafm-root { background-color: #112233; }
+    headerbar { background-color: #223344; color: #ffffff; }
+    .essorafm-sidebar-tree.view { background-color: #1a2a3a; color: #ddeeff; }
+    .essorafm-sidebar-tree.view:selected { background-color: #ff8800; color: #ffffff; }
+```
+
+`Name[xx]` and `Description[xx]` follow the same convention as `.desktop` files. EssoraFM picks the localized variant matching the system language and falls back to the unlocalized `Name=` / `Description=` if no match is found. See `/usr/local/essorafm/theme/README.md` for the full reference of CSS selectors that EssoraFM uses.
+
+To install a new theme, drop its `.theme` file into `/usr/local/essorafm/theme/` and restart EssoraFM. To remove one, delete the file. The selected theme ID is persisted in `~/.config/essorafm/config.ini` under `app_theme`.
+
+---
+
+## GitHub integration (GitGUI)
+
+EssoraFM ships with **GitGUI**, a small Git configuration GUI bundled under `/usr/local/essorafm/gitgui/`. It is reachable from the sidebar's Network section by clicking the **GitHub** entry.
+
+GitGUI is launched as the **regular user**, never with `pkexec` or `sudo`, because it modifies `~/.gitconfig` and `~/.ssh/` — files that must live in the user's home, not in `/root/`.
+
+What it does:
+- Configure `git config --global user.name` / `user.email` / `core.editor`
+- Generate an `ed25519` SSH key with `ssh-keygen` and copy the public key to clipboard for GitHub
+- Clone repositories with progress feedback
+- Run basic `pull` / `push` / `status` actions on a chosen working directory
+
+If `git` is not installed when the user clicks the GitHub entry, EssoraFM detects this via `shutil.which('git')` and shows a localized dialog with the suggested install command — no broken GitGUI window opens. The same applies if `gitgui.py` is missing.
+
+GitGUI's translations live separately in `/usr/local/essorafm/gitgui/translations.json` (11 languages, JSON-based) and are independent from EssoraFM's i18n.
+
+---
+
 ## Architecture
 
 ```
 /usr/local/essorafm/
-├── essorafm.py              # entrypoint
+├── essorafm.py              # entrypoint (--desktop, -D, normal)
 ├── app/
-│   ├── window.py            # main window, layout, key bindings
-│   ├── tabs.py              # tab notebook, close buttons
+│   ├── window.py            # main window, layout, key bindings, theme loader
+│   ├── tabs.py              # tab notebook, close buttons, XDG-aware tab icons
 │   ├── fileview.py          # icon/list view + context menu
-│   ├── sidebar.py           # places + volumes sidebar
+│   ├── sidebar.py           # quick access / places / devices / network sections
 │   ├── pathbar.py           # path bar with integrated search
-│   ├── toolbar.py           # top toolbar
+│   ├── toolbar.py           # top toolbar (icons / icons-flat / text-below / text-right)
 │   ├── preview_panel.py     # right-side preview panel
 │   ├── dialogs.py           # Preferences, Copy progress, About
 │   ├── duplicates.py        # duplicate scanner UI
 │   ├── network_dialog.py    # SMB/FTP/SFTP bookmarks UI
-│   └── desktop.py           # desktop drive icons window
+│   ├── wallpaper_carousel.py # wallpaper picker with thumbnail carousel
+│   └── desktop.py           # built-in desktop renderer (--desktop mode)
 ├── core/
 │   ├── settings.py          # paths, constants
 │   ├── settings_manager.py  # config.ini read/write
-│   ├── desktop_settings.py  # desktop-drive-icons config
+│   ├── desktop_settings.py  # desktop-specific config
 │   ├── filesystem.py        # directory listing, MIME detection
 │   ├── copy_engine.py       # rsync + Python fallback
 │   ├── privilege.py         # pkexec / gksu helper
-│   └── i18n.py              # 12-language string table
+│   ├── xdg.py               # XDG user-dirs.dirs resolution (any language)
+│   └── i18n.py              # 12-language string table (274 keys each)
 ├── services/
 │   ├── icon_loader.py       # GdkPixbuf icon caching
 │   ├── thumbnailer.py       # async thumbnail generation
 │   ├── previewer.py         # preview backends per format
 │   ├── trash.py             # XDG-compliant trash
-│   ├── volumes.py           # udisks2 mount/unmount/eject
-│   └── network_bookmarks.py # network bookmarks persistence
+│   ├── volumes.py           # multi-backend mount/unmount (udisksctl/gio/pkexec)
+│   ├── network_bookmarks.py # network bookmarks persistence
+│   ├── favorites.py         # quick-access favorites persistence
+│   └── themes.py            # .theme file loader
+├── theme/
+│   ├── README.md            # theme format reference
+│   ├── essora.theme         # 🌿 Essora official
+│   ├── neon_cyber.theme     # ⚡ Neon Cyber
+│   ├── aurora.theme         # 🌌 Aurora
+│   ├── carbon.theme         # 🖤 Carbon
+│   ├── ocean_deep.theme     # 🌊 Ocean Deep
+│   └── ember.theme          # 🔥 Ember
+├── gitgui/
+│   ├── gitgui.py            # GitGUI standalone Python/GTK app
+│   └── translations.json    # 11-language strings
 └── ui/
-    ├── icons/               # SVG/PNG icon assets
-    └── styles.css           # GTK CSS theming
+    ├── icons/               # SVG/PNG icon assets (essorafm, favorite, red, github)
+    └── styles.css           # GTK CSS theming base
 ```
 
 The codebase follows a **strict separation of concerns**:
 
 - `app/` — GTK widgets and event handlers only.
-- `core/` — pure logic, no GTK imports outside `Gio` data classes.
-- `services/` — long-lived stateful helpers (icon caches, trash, thumbnails).
+- `core/` — pure logic, no GTK imports outside `Gio`/`GLib` data classes.
+- `services/` — long-lived stateful helpers (icon caches, trash, thumbnails, theme loading).
+- `theme/` — user-extendable theme files, no Python.
+- `gitgui/` — self-contained sub-application launched on demand.
 
 This allows individual modules to be tested or replaced without touching the UI layer.
 
@@ -356,13 +483,17 @@ Supported languages out of the box:
 | `fr` | French      | `zh` | Chinese     |
 | `it` | Italian     | `ar` | Arabic      |
 
-To add a new language, edit `core/i18n.py` and add an entry to the `updates` dict with your translations. Spanish acts as the secondary fallback before English, so any missing key will surface in Spanish first, then English.
+To add a new language, edit `core/i18n.py` and add an entry to the relevant string blocks (`GITHUB_STRINGS`, `THEME_TAB_STRINGS`, `BAR_POSITION_STRINGS`, `HARDCODED_FIX_STRINGS`, `TOOLBAR_FLAT_STRINGS`) with your translations. Spanish acts as the secondary fallback before English, so any missing key surfaces in Spanish first, then English.
 
 To force a language regardless of system locale:
 
 ```bash
 LANG=ja_JP.UTF-8 essorafm
 ```
+
+Theme names and descriptions also follow the same `Name[xx]=` / `Description[xx]=` convention inside their `.theme` files. GitGUI carries its own JSON-based translation file at `/usr/local/essorafm/gitgui/translations.json` (11 languages).
+
+User folder paths (Desktop, Documents, Downloads, Pictures, Music, Videos) are resolved via `core/xdg.py` which calls `GLib.get_user_special_dir()`. This makes EssoraFM work transparently on systems with localized XDG folders (`~/Descargas`, `~/Téléchargements`, `~/ダウンロード`, etc.) without hardcoding name lists.
 
 ---
 
@@ -376,6 +507,7 @@ This is implemented in [`core/privilege.py`](core/privilege.py) and triggered fr
 - Restore from trash
 - Create folder
 - Paste (copy)
+- Mount/unmount when `udisksctl` and `gio mount` both fail (last fallback in `services/volumes.py`)
 
 EssoraFM **never** requests elevated privileges preemptively — only when the kernel actually denies the operation.
 
@@ -387,13 +519,13 @@ To rebuild the `.deb` package:
 
 ```bash
 # from the project root, where DEBIAN/control sits
-fakeroot dpkg-deb --build essorafm-0.4.11-1_amd64
+fakeroot dpkg-deb --build --root-owner-group essorafm-0.4.21-3_amd64
 ```
 
 To create a portable tarball:
 
 ```bash
-tar -czf essorafm-0_4_11-1_amd64_tar.gz essorafm-0.4.11-1_amd64/
+tar -czf essorafm-0_4_21-3_amd64_tar.gz essorafm-0.4.21-3_amd64/
 ```
 
 There is no compilation step — EssoraFM is pure Python.
@@ -414,6 +546,12 @@ Install Poppler:
 sudo apt install poppler-utils
 ```
 
+### SVG wallpapers do not show in the carousel
+GdkPixbuf needs `librsvg` to render SVG. On Debian/Devuan it is installed by default with GTK, but if you ended up without it:
+```bash
+sudo apt install librsvg2-common
+```
+
 ### Right-click context menu missing "Delete" or "Open with..."
 Clear bytecode cache and restart:
 ```bash
@@ -424,10 +562,32 @@ essorafm
 ```
 
 ### Volumes do not mount
-Verify `udisks2` is installed and running:
+EssoraFM tries `udisksctl`, then `gio mount`, then `pkexec mount`. If all three fail, install at least `udisks2`:
 ```bash
 sudo apt install udisks2
 udisksctl status
+```
+
+### USB drives do not show on the desktop
+Open Preferences and check that **Show removable drives** is enabled. The setting persists in `~/.config/essorafm/config.ini` as `desktop_drive_show_removable=true`.
+
+### Sidebar shows "Desktop"/"Documents" pointing to nothing on a non-English system
+Resolved automatically since `0.4.21-2` via `core/xdg.py`. If you upgrade from an older build and the issue persists, run:
+```bash
+xdg-user-dirs-update --force
+```
+to regenerate `~/.config/user-dirs.dirs`, then restart EssoraFM.
+
+### GitHub entry shows "Git is not installed"
+Install Git:
+```bash
+sudo apt install git openssh-client
+```
+
+### Theme does not appear in Preferences
+Verify the file ends in `.theme`, lives directly in `/usr/local/essorafm/theme/` (not in a subfolder), and parses as valid INI. EssoraFM silently skips malformed files. Check with:
+```bash
+python3 -c "import configparser; c=configparser.ConfigParser(); c.read('/usr/local/essorafm/theme/your.theme'); print(c.sections())"
 ```
 
 ### App locks up on a large folder
@@ -449,6 +609,8 @@ When opening a PR:
 2. Preserve the i18n layer — every new user-facing string must land in `core/i18n.py` for at least English and Spanish.
 3. Avoid systemd-only APIs. EssoraFM ships on OpenRC distros.
 4. Test on at least one Devuan or non-systemd Debian derivative when touching mount/unmount or autostart code.
+5. New themes go as `.theme` files in `theme/` — never as hardcoded CSS in `window.py`.
+6. Use `core.xdg.xdg_dir()` instead of `os.path.join(home, 'Downloads')` etc., so the change works in every locale.
 
 Bug reports go in the [issue tracker](https://github.com/josejp2424/essorafm/issues). Please include:
 - EssoraFM version (visible in *About*)
@@ -474,9 +636,9 @@ the Free Software Foundation, either version 3 of the License, or
 ## Credits
 
 - **Author and maintainer**: josejp2424
-- **Co-author**: Nilsonmorales [Woofshahenzup](https://github.com/Woofshahenzup)
-- **Desktop drive icons**: forked from [01micko/desktop-drive-icons](https://github.com/01micko/desktop-drive-icons)
-- **Default theme**: adapted from the Catppuccin Mocha palette
+- **Co-author**: Nilsonmorales [Woofshahenzup](https://github.com/Woofshahenzup) — UI polish, multi-backend mount, redesigned About dialog, flat toolbar style, wallpaper carousel, configurable bar order/position
+- **GitGUI**: based on the original `git-seguro.sh` Bash script by [nilsonmorales](https://github.com/Woofshahenzup), rewritten as a GTK3 Python app for EssoraFM
+- **Default styling**: adapted from the Catppuccin Mocha palette
 - **Tested and shipped with**: [Essora Linux](https://sourceforge.net/projects/essora/)
 
 ---

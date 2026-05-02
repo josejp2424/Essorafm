@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import configparser
 import os
 import gi
@@ -16,6 +16,7 @@ from app.tabs import Tabs
 from app.toolbar import Toolbar
 from app.preview_panel import PreviewPanel
 from app.dialogs import PreferencesDialog, AboutDialog
+from services import themes as theme_service
 
 
 class EssoraFMApp(Gtk.Application):
@@ -30,11 +31,13 @@ class EssoraFMApp(Gtk.Application):
         self.window.present()
 
     def run(self, argv):
+        cleaned = [argv[0]] if argv else []
         for arg in argv[1:]:
             if not arg.startswith('-') and os.path.exists(arg):
                 self.start_path = os.path.abspath(arg)
-                break
-        return super().run(argv)
+                continue
+            cleaned.append(arg)
+        return super().run(cleaned)
 
 
 class MainWindow(Gtk.ApplicationWindow):
@@ -122,6 +125,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self._split_paned.add2(self.tabs_right)
         self.tabs_right.set_no_show_all(True)
         self.tabs_right.hide()
+        
+        self._active_panel = 'left'
 
         self.content_paned = Gtk.Paned.new(Gtk.Orientation.HORIZONTAL)
         self.preview_panel = PreviewPanel()
@@ -131,6 +136,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.status = Gtk.Label(label=tr('ready'), xalign=0)
         self.status.get_style_context().add_class('essorafm-status')
+        self._permanent_status_text = tr('ready')
+        self._status_restore_id = None
 
         self._layout_container = None
         self._build_layout()
@@ -139,7 +146,14 @@ class MainWindow(Gtk.ApplicationWindow):
         self._sync_preview_callback()
         self.update_pathbar()
         self.connect('key-press-event', self._on_key_press)
+        
+        self._connect_panel_click_events()
+        
+        self.tabs.connect('switch-page', self._on_tab_switched)
+        self.tabs_right.connect('switch-page', self._on_tab_switched)
+        
         self.show_all()
+        self._apply_app_theme()
         self._sync_hidden_button()
 
         current_view = self.current_view()
@@ -151,9 +165,177 @@ class MainWindow(Gtk.ApplicationWindow):
             self.settings_manager.get('sort_direction', 'asc'),
         )
         
-
         self._apply_preview_visibility(self.preview_toggle.get_active())
+        
+        self._update_panel_style()
+        
+        GLib.idle_add(self.update_status_from_active_view)
 
+    def update_status_from_active_view(self):
+        """Actualiza la barra de estado desde la vista activa."""
+        view = self.current_view()
+        if view and hasattr(view, 'update_status'):
+            view.update_status()
+
+    def _on_tab_switched(self, notebook, page, page_num):
+        """Cuando se cambia de pestaña, actualizar la barra de estado."""
+        self.update_status_from_active_view()
+
+    def _connect_panel_click_events(self):
+        """Conecta eventos de clic para detectar qué panel está activo."""
+        self.tabs.connect('button-press-event', self._on_panel_click, 'left')
+        self.tabs.connect('focus-in-event', self._on_panel_focus, 'left')
+        
+        self.tabs_right.connect('button-press-event', self._on_panel_click, 'right')
+        self.tabs_right.connect('focus-in-event', self._on_panel_focus, 'right')
+        
+        self._connect_fileview_events(self.tabs, 'left')
+        self._connect_fileview_events(self.tabs_right, 'right')
+        
+        self.tabs.connect('page-added', self._on_tab_added, 'left')
+        self.tabs_right.connect('page-added', self._on_tab_added, 'right')
+
+    def _connect_fileview_events(self, tabs_widget, panel_name):
+        """Conecta eventos a los FileView dentro de un panel."""
+        for idx in range(tabs_widget.get_n_pages()):
+            view = tabs_widget.get_nth_page(idx)
+            if view:
+                view.connect('button-press-event', self._on_fileview_click, panel_name)
+                view.connect('focus-in-event', self._on_fileview_focus, panel_name)
+
+    def _on_tab_added(self, tabs_widget, child, page_num, panel_name):
+        """Cuando se agrega una nueva pestaña, conectar sus eventos."""
+        if child:
+            child.connect('button-press-event', self._on_fileview_click, panel_name)
+            child.connect('focus-in-event', self._on_fileview_focus, panel_name)
+
+    def _on_panel_click(self, widget, event, panel_name):
+        """Cuando se hace clic en un panel, activarlo."""
+        if self._active_panel != panel_name:
+            self._active_panel = panel_name
+            self.update_pathbar()
+            self._sync_hidden_button()
+            self._update_panel_style()
+            
+            view = self.current_view()
+            if view:
+                self.toolbar.set_view_mode(view.view_mode)
+                self.update_status_from_active_view()
+        return False
+
+    def _on_panel_focus(self, widget, event, panel_name):
+        """Cuando un panel recibe foco, activarlo."""
+        if self._active_panel != panel_name:
+            self._active_panel = panel_name
+            self.update_pathbar()
+            self._sync_hidden_button()
+            self._update_panel_style()
+            view = self.current_view()
+            if view:
+                self.toolbar.set_view_mode(view.view_mode)
+                self.update_status_from_active_view()
+        return False
+
+    def _on_fileview_click(self, widget, event, panel_name):
+        """Cuando se hace clic en un FileView, activar su panel."""
+        if self._active_panel != panel_name:
+            self._active_panel = panel_name
+            self.update_pathbar()
+            self._sync_hidden_button()
+            self._update_panel_style()
+            view = self.current_view()
+            if view:
+                self.toolbar.set_view_mode(view.view_mode)
+                self.update_status_from_active_view()
+        return False
+
+    def _on_fileview_focus(self, widget, event, panel_name):
+        """Cuando un FileView recibe foco, activar su panel."""
+        if self._active_panel != panel_name:
+            self._active_panel = panel_name
+            self.update_pathbar()
+            self._sync_hidden_button()
+            self._update_panel_style()
+            view = self.current_view()
+            if view:
+                self.toolbar.set_view_mode(view.view_mode)
+                self.update_status_from_active_view()
+        return False
+
+    def _apply_local_css(self):
+        """Aplica CSS profesional con barra de acento para panel activo."""
+        css = f"""
+        button.about-green, button.about-green label {{ color: {ABOUT_GREEN}; }}
+        
+        /* Estilo profesional para panel activo - barra de acento superior */
+        .panel-underline {{
+            box-shadow: inset 0 2px 0 0 @selected_bg_color;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.1s ease;
+        }}
+        
+        /* Estilo para panel inactivo - sin barra */
+        .panel-inactive {{
+            box-shadow: none;
+        }}
+        
+        /* ============================================
+           ESTILOS COMPACTOS PARA PESTAÑAS
+           ============================================ */
+        .essorafm-tabs tab {{
+            padding: 4px 8px;
+            min-width: 150px;
+        }}
+        
+        .essorafm-tab-label label {{
+            font-size: 14px;
+            margin: 0 4px;
+        }}
+        
+        .essorafm-tab-close {{
+            padding: 2px;
+            min-width: 20px;
+            min-height: 20px;
+            border-radius: 10px;
+        }}
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css.encode('utf-8'))
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), 
+            provider, 
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def _update_panel_style(self):
+        """Aplica barra de acento superior al panel activo (estilo profesional)."""
+        for panel in [self.tabs, self.tabs_right]:
+            panel.get_style_context().remove_class('panel-underline')
+            panel.get_style_context().remove_class('panel-inactive')
+        
+        if self._split_active:
+            if self._active_panel == 'left':
+                self.tabs.get_style_context().add_class('panel-underline')
+                self.tabs_right.get_style_context().add_class('panel-inactive')
+            else:
+                self.tabs_right.get_style_context().add_class('panel-underline')
+                self.tabs.get_style_context().add_class('panel-inactive')
+        else:
+            self.tabs.get_style_context().add_class('panel-underline')
+
+    def get_active_panel(self):
+        """Retorna el widget del panel activo."""
+        if not self._split_active:
+            return self.tabs
+        
+        if self._active_panel == 'right' and self.tabs_right.get_visible():
+            return self.tabs_right
+        return self.tabs
+
+    def current_view(self):
+        """Obtiene la vista activa actual (del panel activo)."""
+        active_panel = self.get_active_panel()
+        return active_panel.current_view() if active_panel else None
 
     def _make_left_box(self):
         left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -169,6 +351,18 @@ class MainWindow(Gtk.ApplicationWindow):
         row.pack_start(self.pathbar, True, True, 0)
         row.pack_start(self.preview_toggle, False, False, 0)
         return row
+
+    def _make_bars_box(self):
+        """Construye el bloque toolbar + pathbar respetando el orden configurado."""
+        bars = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        toolbar_first = self.settings_manager.get_bool('toolbar_first', True)
+        if toolbar_first:
+            bars.pack_start(self.toolbar, False, False, 0)
+            bars.pack_start(self._make_pathbar_row(), False, False, 0)
+        else:
+            bars.pack_start(self._make_pathbar_row(), False, False, 0)
+            bars.pack_start(self.toolbar, False, False, 0)
+        return bars
 
     def _make_outer_paned(self, left_widget, right_widget):
         outer = Gtk.Paned.new(Gtk.Orientation.HORIZONTAL)
@@ -218,24 +412,24 @@ class MainWindow(Gtk.ApplicationWindow):
         right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         right_box.get_style_context().add_class('essorafm-content')
         right_box.set_border_width(8)
-        right_box.pack_start(self.toolbar, False, False, 0)
-        right_box.pack_start(self._make_pathbar_row(), False, False, 0)
+        bars_bottom = self.settings_manager.get('bars_position', 'top') == 'bottom'
+        if not bars_bottom:
+            right_box.pack_start(self._make_bars_box(), False, False, 0)
         right_box.pack_start(self.content_paned, True, True, 0)
         right_box.pack_start(self.status, False, False, 0)
+        if bars_bottom:
+            right_box.pack_start(self._make_bars_box(), False, False, 0)
         return self._make_outer_paned(self._make_left_box(), right_box)
 
     def _assemble_top_bar_layout(self):
         wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        bars_bottom = self.settings_manager.get('bars_position', 'top') == 'bottom'
 
-        top_bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        top_bar.get_style_context().add_class('essorafm-topbar')
-        top_bar.set_border_width(6)
-        top_bar.pack_start(self.toolbar, False, False, 0)
-        top_bar.pack_start(self._make_pathbar_row(), False, False, 0)
-        wrapper.pack_start(top_bar, False, False, 0)
-
-        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        wrapper.pack_start(sep, False, False, 0)
+        bars_widget = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        bars_widget.get_style_context().add_class('essorafm-topbar')
+        bars_widget.set_border_width(6)
+        inner = self._make_bars_box()
+        bars_widget.pack_start(inner, False, False, 0)
 
         right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         right_box.get_style_context().add_class('essorafm-content')
@@ -243,9 +437,18 @@ class MainWindow(Gtk.ApplicationWindow):
         right_box.pack_start(self.content_paned, True, True, 0)
         right_box.pack_start(self.status, False, False, 0)
 
-        wrapper.pack_start(
-            self._make_outer_paned(self._make_left_box(), right_box),
-            True, True, 0)
+        inner_paned = self._make_outer_paned(self._make_left_box(), right_box)
+
+        if not bars_bottom:
+            wrapper.pack_start(bars_widget, False, False, 0)
+            sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+            wrapper.pack_start(sep, False, False, 0)
+            wrapper.pack_start(inner_paned, True, True, 0)
+        else:
+            wrapper.pack_start(inner_paned, True, True, 0)
+            sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+            wrapper.pack_start(sep, False, False, 0)
+            wrapper.pack_start(bars_widget, False, False, 0)
         return wrapper
 
     def _load_sidebar_art(self):
@@ -260,14 +463,6 @@ class MainWindow(Gtk.ApplicationWindow):
             self.sidebar_art.set_from_pixbuf(pix)
         except Exception:
             pass
-
-    def _apply_local_css(self):
-        css = f"""
-        button.about-green, button.about-green label {{ color: {ABOUT_GREEN}; }}
-        """
-        provider = Gtk.CssProvider()
-        provider.load_from_data(css.encode('utf-8'))
-        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def _apply_theme_from_settings_ini(self):
         settings = Gtk.Settings.get_default()
@@ -299,10 +494,103 @@ class MainWindow(Gtk.ApplicationWindow):
         elif prefer_dark in {'0', 'false', 'no', 'off'}:
             settings.set_property('gtk-application-prefer-dark-theme', False)
 
+    _BUILTIN_THEMES = {
+        'default': '',         
+        'gtk_system': '__SYSTEM__',  
+    }
+
+
+    _theme_provider = None
+
+    def _apply_app_theme(self):
+        """Aplica el tema seleccionado inyectando CSS como provider global."""
+        from gi.repository import Gdk as _Gdk
+        screen = _Gdk.Screen.get_default()
+        theme_id = self.settings_manager.get('app_theme', 'default')
+        rounded  = self.settings_manager.get_bool('theme_rounded', True)
+        cards    = self.settings_manager.get_bool('theme_cards', False)
+
+
+        if MainWindow._theme_provider is not None:
+            try:
+                Gtk.StyleContext.remove_provider_for_screen(screen, MainWindow._theme_provider)
+            except Exception:
+                pass
+            MainWindow._theme_provider = None
+
+        if theme_id == 'gtk_system':
+            return
+
+        if theme_id in MainWindow._BUILTIN_THEMES:
+            css_base = MainWindow._BUILTIN_THEMES[theme_id]
+        else:
+            theme = theme_service.get_theme(theme_id)
+            css_base = theme['css'] if theme else ''
+
+        extra = ""
+        if rounded:
+            extra += """
+            /* ── Sidebar scroll container ── */
+            .essorafm-sidebar-scroll {
+                border-radius: 10px;
+                margin: 6px 4px 6px 6px;
+            }
+            /* El treeview del sidebar */
+            .essorafm-sidebar-tree.view {
+                border-radius: 10px;
+            }
+            /* ── Panel de archivos ── */
+            .essorafm-fileview-scroll {
+                border-radius: 10px;
+                margin: 4px 6px 4px 4px;
+            }
+            .essorafm-fileview-scroll treeview.view,
+            .essorafm-fileview-scroll .essorafm-iconview {
+                border-radius: 10px;
+            }
+            /* quitar sombra/borde que corta las esquinas */
+            .essorafm-sidebar-scroll undershoot,
+            .essorafm-sidebar-scroll overshoot,
+            .essorafm-fileview-scroll undershoot,
+            .essorafm-fileview-scroll overshoot {
+                background: none;
+                border: none;
+            }
+            """
+        if cards:
+            extra += """
+            .essorafm-fileview-scroll {
+                border-radius: 14px;
+                margin: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            }
+            """
+
+        full_css = css_base + extra
+        if not full_css.strip():
+            return
+
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(full_css.encode('utf-8'))
+        except Exception as e:
+            print(f"[EssoraFM] CSS theme error: {e}")
+            return
+
+        Gtk.StyleContext.add_provider_for_screen(
+            screen, provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1  
+        )
+        MainWindow._theme_provider = provider
+
     def _sync_preview_callback(self):
         try:
             for idx in range(self.tabs.get_n_pages()):
                 view = self.tabs.get_nth_page(idx)
+                if view:
+                    view.preview_callback = self.preview_panel.set_file
+            for idx in range(self.tabs_right.get_n_pages()):
+                view = self.tabs_right.get_nth_page(idx)
                 if view:
                     view.preview_callback = self.preview_panel.set_file
         except Exception:
@@ -324,9 +612,14 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.tabs_right.add_tab(path)
             self.tabs_right.set_no_show_all(False)
             self.tabs_right.show_all()
+            self._connect_fileview_events(self.tabs_right, 'right')
             GLib.idle_add(self._equalize_split)
+            GLib.idle_add(self.update_status_from_active_view)
         else:
             self.tabs_right.hide()
+            self._active_panel = 'left'
+            self._update_panel_style()
+            self.update_status_from_active_view()
         self.toolbar.set_split_active(active)
 
     def _equalize_split(self):
@@ -336,8 +629,12 @@ class MainWindow(Gtk.ApplicationWindow):
         return False
 
     def _on_right_panel_changed(self, *_args):
-        """Callback del panel derecho — no cambia el pathbar principal."""
+        """Callback del panel derecho."""
         self._sync_preview_callback()
+        if self._active_panel == 'right':
+            self.update_pathbar()
+            self._sync_hidden_button()
+            GLib.idle_add(self.update_status_from_active_view)
 
     def _on_view_mode_changed(self, mode):
         """Llamado por el toolbar al cambiar el modo de vista (iconos/lista)."""
@@ -372,9 +669,6 @@ class MainWindow(Gtk.ApplicationWindow):
         except Exception as e:
             print(f"Error toggling preview: {e}")
 
-    def current_view(self):
-        return self.tabs.current_view()
-
     def open_path(self, path):
         view = self.current_view()
         if view:
@@ -382,12 +676,14 @@ class MainWindow(Gtk.ApplicationWindow):
             self.update_pathbar()
             self._sync_hidden_button()
 
-    def update_pathbar(self, *_args):
+    def update_pathbar(self, *_args, is_status=False):
         self._sync_preview_callback()
         view = self.current_view()
         if view:
             self.pathbar.set_path(view.current_path)
             self._sync_hidden_button()
+            if not is_status:
+                GLib.idle_add(self.update_status_from_active_view)
 
     def go_up(self):
         view = self.current_view()
@@ -404,7 +700,8 @@ class MainWindow(Gtk.ApplicationWindow):
     def new_tab(self):
         view = self.current_view()
         path = view.current_path if view else DEFAULT_START_DIR
-        self.tabs.add_tab(path)
+        active_panel = self.get_active_panel()
+        active_panel.add_tab(path)
         self.update_pathbar()
 
     def new_folder(self):
@@ -437,41 +734,55 @@ class MainWindow(Gtk.ApplicationWindow):
             view.open_duplicate_scanner()
             self.update_pathbar()
 
-    def show_message(self, text):
+    def show_message(self, text, is_status=False):
+        """Muestra un mensaje en la barra de estado.
+
+        is_status=True  -> mensaje permanente (conteo de archivos/carpetas).
+                           Se guarda como estado base y no desaparece.
+        is_status=False -> notificacion temporal (copia, borrado, etc.).
+                           Se muestra 3 s y luego restaura el estado base.
+        """
         self.status.set_text(text)
+        if is_status:
+            self._permanent_status_text = text
+            if self._status_restore_id is not None:
+                GLib.source_remove(self._status_restore_id)
+                self._status_restore_id = None
+        else:
+            if self._status_restore_id is not None:
+                GLib.source_remove(self._status_restore_id)
+            self._status_restore_id = GLib.timeout_add(3000, self._restore_status)
 
-    _AUTOSTART_DESKTOP_SRC = '/usr/local/essorafm/essorafm_desktop_drive_icons.desktop'
-    _AUTOSTART_DESKTOP_DST = '/etc/xdg/autostart/essorafm_desktop_drive_icons.desktop'
+    def _restore_status(self):
+        """Restaura el texto de estado permanente tras una notificacion temporal."""
+        self._status_restore_id = None
+        self.status.set_text(self._permanent_status_text)
+        return False
 
-    def _sync_autostart_desktop(self, enabled):
+    _LEGACY_DRIVE_ICONS_AUTOSTART = '/etc/xdg/autostart/essorafm_desktop_drive_icons.desktop'
+
+    def _sync_autostart_desktop(self, enabled=None):
+        """Remove the old external desktop_drive_icons autostart.
+
+        Drive icons are now handled only by essorafm --desktop. The preference
+        desktop_drive_icons controls whether the internal icons are drawn; it
+        must not install or start the old standalone binary anymore.
+        """
         import os
         from core.privilege import run_privileged
 
-        src = self._AUTOSTART_DESKTOP_SRC
-        dst = self._AUTOSTART_DESKTOP_DST
-
-        if enabled:
-            if not os.path.exists(src):
-                self.show_message(f"{tr('autostart_not_found')} {src}")
-                return
-            if os.path.exists(dst):
-                return  
-            try:
-                run_privileged(['/bin/cp', '-f', '--', src, dst])
-                self.show_message(tr('autostart_enabled'))
-            except RuntimeError as exc:
-                self.show_message(f"{tr('autostart_error')} {exc}")
-        else:
-            if not os.path.exists(dst):
-                return  
-            try:
-                run_privileged(['/bin/rm', '-f', '--', dst])
-                self.show_message(tr('autostart_disabled'))
-            except RuntimeError as exc:
-                self.show_message(f"{tr('autostart_error')} {exc}")
+        dst = self._LEGACY_DRIVE_ICONS_AUTOSTART
+        if not os.path.exists(dst):
+            return
+        try:
+            run_privileged(['/bin/rm', '-f', '--', dst])
+            self.show_message(tr('legacy_external_drive_icons_removed'))
+        except RuntimeError as exc:
+            self.show_message(f"{tr('autostart_error')} {exc}")
 
     def apply_ui_settings(self):
         self.tabs.apply_preferences_all()
+        self.tabs_right.apply_preferences_all()
         preview_enabled = self.settings_manager.get_bool('preview_enabled', True)
         self.preview_toggle.handler_block_by_func(self._on_preview_toggled)
         self.preview_toggle.set_active(preview_enabled)
@@ -492,6 +803,10 @@ class MainWindow(Gtk.ApplicationWindow):
 
             old_layout = self.settings_manager.get('sidebar_layout', 'classic')
             new_layout = new_values.get('sidebar_layout', 'classic')
+            old_toolbar_first = self.settings_manager.get('toolbar_first', 'true')
+            new_toolbar_first = new_values.get('toolbar_first', 'true')
+            old_bars_position = self.settings_manager.get('bars_position', 'top')
+            new_bars_position = new_values.get('bars_position', 'top')
 
             self.settings_manager.update(new_values)
 
@@ -500,19 +815,23 @@ class MainWindow(Gtk.ApplicationWindow):
             try:
                 from core.desktop_settings import DesktopDriveSettings
                 DesktopDriveSettings().update({
-                    'enabled': self.settings_manager.get('desktop_drive_icons', 'true'),
-                    'icon_size': self.settings_manager.get('desktop_drive_icon_size', '48'),
-                    'show_internal': self.settings_manager.get('desktop_drive_show_internal', 'true'),
-                    'show_removable': self.settings_manager.get('desktop_drive_show_removable', 'true'),
-                    'show_network': self.settings_manager.get('desktop_drive_show_network', 'false'),
+                    'desktop_drive_icons': self.settings_manager.get('desktop_drive_icons', 'true'),
+                    'desktop_drive_icon_size': self.settings_manager.get('desktop_drive_icon_size', '48'),
+                    'desktop_drive_show_internal': self.settings_manager.get('desktop_drive_show_internal', 'true'),
+                    'desktop_drive_show_removable': self.settings_manager.get('desktop_drive_show_removable', 'true'),
+                    'desktop_drive_show_network': self.settings_manager.get('desktop_drive_show_network', 'false'),
                 })
             except Exception:
                 pass
 
             self.sidebar.apply_preferences()
             self.tabs.apply_preferences_all()
+            self.tabs_right.apply_preferences_all()
 
-            if old_layout != new_layout:
+            needs_rebuild = (old_layout != new_layout or
+                             old_toolbar_first != new_toolbar_first or
+                             old_bars_position != new_bars_position)
+            if needs_rebuild:
                 self._rebuild_layout()
             else:
                 if hasattr(self.toolbar, 'refresh_all_buttons'):
@@ -525,6 +844,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.resize(new_w, new_h)
             
             self.apply_ui_settings()
+            self._apply_app_theme()
             self.show_message(tr('saved_preferences'))
         dialog.destroy()
 
@@ -541,7 +861,8 @@ class MainWindow(Gtk.ApplicationWindow):
         if ctrl and event.keyval == Gdk.KEY_w:
             view = self.current_view()
             if view:
-                self.tabs.close_tab(view)
+                active_panel = self.get_active_panel()
+                active_panel.close_tab(view)
             return True
         if ctrl and event.keyval == Gdk.KEY_l:
             self.pathbar.entry.grab_focus()
@@ -552,5 +873,19 @@ class MainWindow(Gtk.ApplicationWindow):
             return True
         if ctrl and event.keyval == Gdk.KEY_comma:
             self.show_preferences()
+            return True
+        if event.keyval == Gdk.KEY_Tab and ctrl:
+            if self._split_active:
+                if self._active_panel == 'left':
+                    self._active_panel = 'right'
+                else:
+                    self._active_panel = 'left'
+                self._update_panel_style()
+                self.update_pathbar()
+                self._sync_hidden_button()
+                view = self.current_view()
+                if view:
+                    self.toolbar.set_view_mode(view.view_mode)
+                    self.update_status_from_active_view()
             return True
         return False

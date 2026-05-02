@@ -1,0 +1,60 @@
+[Theme]
+Id = aurora
+Name = Aurora
+Name[es] = Aurora
+Name[ca] = Aurora
+Name[de] = Aurora
+Name[fr] = Aurore
+Name[it] = Aurora
+Name[pt] = Aurora
+Name[hu] = Aurora
+Name[ja] = オーロラ
+Name[ru] = Аврора
+Name[zh] = 极光
+Name[ar] = أورورا
+Description = Futuristic violet, deep purples
+Description[es] = Violeta futurista, púrpuras profundos
+Description[ca] = Violeta futurista, porpres profunds
+Description[de] = Futuristisches Violett, tiefe Lila-Töne
+Description[fr] = Violet futuriste, pourpres profonds
+Description[it] = Viola futuristico, porpora profondo
+Description[pt] = Violeta futurista, roxos profundos
+Description[hu] = Futurisztikus lila, mély bíborok
+Description[ja] = 未来的なバイオレット、深いパープル
+Description[ru] = Футуристический фиолетовый, глубокие пурпурные оттенки
+Description[zh] = 未来感紫罗兰,深紫色调
+Description[ar] = بنفسجي مستقبلي بدرجات أرجوانية عميقة
+Author = josejp2424
+Version = 1.0
+Emoji = 🌌
+
+[CSS]
+Code =
+    window, .essorafm-root { background-color: #0d0618; }
+    headerbar {
+        background-color: #130920;
+        border-bottom: 2px solid #7c3aed;
+        color: #e8d5ff;
+    }
+    headerbar button { color: #e8d5ff; }
+    .essorafm-sidebar-box, .essorafm-sidebar,
+    .essorafm-sidebar-tree { background-color: #100720; }
+    .essorafm-sidebar-tree.view {
+        background-color: #100720; color: #d8b4fe;
+    }
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #3b0764; color: #e9d5ff;
+    }
+    .essorafm-content, .essorafm-toolbar { background-color: #0d0618; }
+    treeview.view { background-color: #0f0720; color: #ddd6fe; }
+    .essorafm-tabs { background-color: #0d0618; }
+    .essorafm-tabs tab {
+        background-color: #130920; color: #a78bfa;
+        border-radius: 10px 10px 0 0;
+    }
+    .essorafm-tabs tab:hover { background-color: #1e0f2e; color: #c4b5fd; }
+    .essorafm-tabs tab:checked {
+        background-color: #3b0764; color: #e9d5ff;
+        box-shadow: 0 -2px 0 0 #7c3aed;
+    }

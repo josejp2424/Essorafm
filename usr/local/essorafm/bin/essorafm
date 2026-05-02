@@ -1,4 +1,4 @@
 #!/bin/sh
 # EssoraFM
 # Author: josejp2424 - GPL-3.0
-python3 /usr/local/essorafm/essorafm.py
+exec python3 /usr/local/essorafm/essorafm.py "$@"

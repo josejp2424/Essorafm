@@ -5,7 +5,7 @@
 # Desktop control, wallpaper, desktop icons and drive icons.
 # This uses GIO/GVolumeMonitor and EssoraFM's own config in ~/.config/essorafm/.
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
 import shutil
 import subprocess
@@ -23,6 +23,8 @@ from services.icon_loader import IconLoader
 from core.desktop_settings import DesktopDriveSettings, DESKTOP_DRIVES_CONFIG, DESKTOP_DRIVES_COMPAT_CONFIG
 from core.settings import CONFIG_DIR
 from core.i18n import tr
+from core.xdg import xdg_dir, XDG
+from app.wallpaper_carousel import WallpaperCarouselDialog
 
 
 class DesktopDriveIcon(Gtk.EventBox):
@@ -33,6 +35,7 @@ class DesktopDriveIcon(Gtk.EventBox):
         self.set_visible_window(False)
         self.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK)
         self.connect('button-press-event', self._on_button_press)
+        self.connect('button-release-event', self._on_button_release)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_size_request(self.desktop.cell_w, self.desktop.cell_h)
@@ -40,29 +43,83 @@ class DesktopDriveIcon(Gtk.EventBox):
         box.set_valign(Gtk.Align.CENTER)
         self.add(box)
 
+        is_mounted = bool(item.get('mounted')) or item.get('kind') == 'mount'
+        can_eject = bool(item.get('can_eject') or item.get('can_unmount'))
+
         pix = self.desktop.icon_loader._load_from_gicon(item.get('icon'), self.desktop.icon_size)
         image = Gtk.Image.new_from_pixbuf(pix) if pix else Gtk.Image.new_from_icon_name('drive-harddisk', Gtk.IconSize.DIALOG)
         image.set_pixel_size(self.desktop.icon_size)
-        box.pack_start(image, False, False, 0)
+        if not is_mounted:
+            image.set_opacity(0.5)
+
+        overlay = Gtk.Overlay()
+        overlay.add(image)
+
+        if is_mounted and can_eject:
+            badge = self._build_eject_badge()
+            overlay.add_overlay(badge)
+
+        box.pack_start(overlay, False, False, 0)
 
         if self.desktop.show_labels:
             label = Gtk.Label(label=item.get('name') or 'Drive')
             label.set_line_wrap(True)
+            if getattr(self.desktop, 'label_lines', 0) > 0:
+                label.set_lines(self.desktop.label_lines)
             label.set_justify(Gtk.Justification.CENTER)
             label.set_max_width_chars(self.desktop.label_width)
             label.set_ellipsize(3)
             label.get_style_context().add_class('essorafm-desktop-label')
+            if not is_mounted:
+                label.set_opacity(0.6)
             box.pack_start(label, False, False, 0)
 
         path = item.get('path') or ''
-        self.set_tooltip_text(f"{item.get('name')}\n{path if item.get('mounted') and path else tr('not_mounted')}")
+        self.set_tooltip_text(f"{item.get('name')}\n{path if is_mounted and path else tr('not_mounted')}")
+
+    def _build_eject_badge(self):
+        """Construye el badge de eject que aparece en la esquina inferior derecha
+        de los iconos de discos montados. Es un EventBox propio: el click sobre
+        él desmonta el disco sin propagarse al icono principal."""
+        badge = Gtk.EventBox()
+        badge.set_visible_window(False)
+        badge.set_halign(Gtk.Align.END)
+        badge.set_valign(Gtk.Align.END)
+        badge.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
+        badge.set_tooltip_text(tr('unmount'))
+
+        badge_size = max(16, self.desktop.icon_size // 3)
+        img = Gtk.Image.new_from_icon_name('media-eject-symbolic', Gtk.IconSize.MENU)
+        img.set_pixel_size(badge_size)
+        img.get_style_context().add_class('essorafm-eject-badge')
+        badge.add(img)
+
+        badge.connect('button-press-event', self._on_badge_click)
+        badge.connect('enter-notify-event', lambda *_: img.set_opacity(1.0) or False)
+        badge.connect('leave-notify-event', lambda *_: img.set_opacity(0.85) or False)
+        img.set_opacity(0.85)
+        return badge
+
+    def _on_badge_click(self, _widget, event):
+        """Click sobre el badge -> desmonta el disco. Retorna True para que el
+        evento NO se propague al EventBox padre (evita abrir el disco a la vez)."""
+        if event.button != 1:
+            return True
+        self.desktop.unmount_item(self.item)
+        return True
 
     def _on_button_press(self, _widget, event):
+        if event.button == 3:
+            self.desktop.popup_menu_for_item(self.item, event)
+            return True
         if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
             self.desktop.open_item(self.item)
             return True
-        if event.button == 3:
-            self.desktop.popup_menu_for_item(self.item, event)
+        return False
+
+    def _on_button_release(self, _widget, event):
+        if event.button == 1:
+            self.desktop.open_item(self.item)
             return True
         return False
 
@@ -88,6 +145,8 @@ class DesktopFileIcon(Gtk.EventBox):
 
         label = Gtk.Label(label=self._display_name(path))
         label.set_line_wrap(True)
+        if getattr(self.desktop, 'label_lines', 0) > 0:
+            label.set_lines(self.desktop.label_lines)
         label.set_justify(Gtk.Justification.CENTER)
         label.set_max_width_chars(self.desktop.label_width)
         label.set_ellipsize(3)
@@ -98,29 +157,36 @@ class DesktopFileIcon(Gtk.EventBox):
     def _display_name(self, path):
         name = os.path.basename(path)
         if name.endswith('.desktop'):
-            try:
-                keyfile = GLib.KeyFile()
-                keyfile.load_from_file(path, GLib.KeyFileFlags.NONE)
-                value = keyfile.get_locale_string('Desktop Entry', 'Name', None)
+            keyfile = self._load_keyfile(path)
+            if keyfile is not None:
+                value = self._read_localized(keyfile, 'Name')
                 if value:
                     return value
-            except Exception:
-                pass
+                target = self._link_target(keyfile)
+                if target:
+                    target_kf = self._load_keyfile(target)
+                    if target_kf is not None:
+                        value = self._read_localized(target_kf, 'Name')
+                        if value:
+                            return value
             return name[:-8]
         return name
 
     def _gicon_for_path(self, path):
         if path.endswith('.desktop'):
-            try:
-                keyfile = GLib.KeyFile()
-                keyfile.load_from_file(path, GLib.KeyFileFlags.NONE)
-                icon = keyfile.get_string('Desktop Entry', 'Icon')
+            keyfile = self._load_keyfile(path)
+            if keyfile is not None:
+                icon = self._read_localized(keyfile, 'Icon')
+                if not icon:
+                    target = self._link_target(keyfile)
+                    if target:
+                        target_kf = self._load_keyfile(target)
+                        if target_kf is not None:
+                            icon = self._read_localized(target_kf, 'Icon')
                 if icon:
                     if os.path.isabs(icon) and os.path.exists(icon):
                         return Gio.FileIcon.new(Gio.File.new_for_path(icon))
                     return Gio.ThemedIcon.new(icon)
-            except Exception:
-                pass
         try:
             info = Gio.File.new_for_path(path).query_info('standard::icon', Gio.FileQueryInfoFlags.NONE, None)
             icon = info.get_icon()
@@ -129,6 +195,43 @@ class DesktopFileIcon(Gtk.EventBox):
         except Exception:
             pass
         return Gio.ThemedIcon.new('text-x-generic')
+
+    def _load_keyfile(self, path):
+        try:
+            keyfile = GLib.KeyFile()
+            keyfile.load_from_file(path, GLib.KeyFileFlags.NONE)
+            return keyfile
+        except Exception:
+            return None
+
+    def _read_localized(self, keyfile, key):
+        try:
+            value = keyfile.get_locale_string('Desktop Entry', key, None)
+            if value:
+                return value
+        except Exception:
+            pass
+        try:
+            return keyfile.get_string('Desktop Entry', key)
+        except Exception:
+            return ''
+
+    def _link_target(self, keyfile):
+        """Si el .desktop es Type=Link y URL apunta a otro .desktop existente,
+        devuelve la ruta del .desktop apuntado, si no devuelve None."""
+        try:
+            entry_type = keyfile.get_string('Desktop Entry', 'Type')
+        except Exception:
+            return None
+        if entry_type != 'Link':
+            return None
+        try:
+            url = keyfile.get_string('Desktop Entry', 'URL')
+        except Exception:
+            return None
+        if url and url.endswith('.desktop') and os.path.isabs(url) and os.path.exists(url):
+            return url
+        return None
 
     def _on_button_press(self, _widget, event):
         if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
@@ -171,24 +274,39 @@ class EssoraDesktop(Gtk.Window):
         self._configure_desktop_window()
         self._apply_css()
 
-        for signal_name in ('mount-added', 'mount-removed', 'volume-added', 'volume-removed', 'volume-changed', 'mount-changed'):
-            self.volume_service.connect(signal_name, lambda *args: GLib.idle_add(self.refresh))
+        for signal_name in (
+            'mount-added', 'mount-removed', 'mount-changed', 'mount-pre-unmount',
+            'volume-added', 'volume-removed', 'volume-changed',
+            'drive-connected', 'drive-disconnected', 'drive-changed',
+        ):
+            try:
+                self.volume_service.connect(signal_name, lambda *args: self._schedule_refresh(delay_ms=150))
+            except Exception:
+                pass
 
         self._drive_icons_process = None
+        self._last_volume_signature = None
+        self._configure_refresh_id = 0
         self.connect('destroy', self._on_destroy)
         self.connect('screen-changed', lambda *_: self._resize_to_screen())
-        self.refresh()
+        self.connect('configure-event', self._on_configure_event)
+        self.connect('map-event', lambda *_: self._schedule_refresh(delay_ms=250))
+
+        GLib.idle_add(self.refresh)
+        GLib.timeout_add(600, self.refresh)
+        GLib.timeout_add(1600, self.refresh)
+        GLib.timeout_add_seconds(2, self._poll_volume_changes)
 
     def _reload_settings(self):
         self.desktop_settings.load()
-        self.enabled = self.desktop_settings.get_bool('Enabled', True)
-        self.use_external_drive_icons = self.desktop_settings.get_bool('UseExternalDriveIcons', True)
-        self.show_internal = self.desktop_settings.get_bool('ShowInternal', True)
-        self.show_removable = self.desktop_settings.get_bool('ShowRemovable', True)
-        self.show_network = self.desktop_settings.get_bool('ShowNetwork', False)
+        self.enabled = self.desktop_settings.get_bool('desktop_drive_icons', True)
+        self.use_external_drive_icons = False
+        self.show_internal = self.desktop_settings.get_bool('desktop_drive_show_internal', True)
+        self.show_removable = self.desktop_settings.get_bool('desktop_drive_show_removable', True)
+        self.show_network = self.desktop_settings.get_bool('desktop_drive_show_network', False)
         self.show_labels = self.desktop_settings.get_bool('ShowLabels', True)
         self.show_desktop_files = self.desktop_settings.get_bool('ShowDesktopFiles', True)
-        self.icon_size = self.desktop_settings.get_int('IconSize', 48)
+        self.icon_size = self.desktop_settings.get_int('desktop_drive_icon_size', 48)
         self.spacing_x = self.desktop_settings.get_int('SpacingX', 112)
         self.spacing_y = self.desktop_settings.get_int('SpacingY', 112)
         self.label_width = self.desktop_settings.get_int('LabelWidth', 12)
@@ -196,110 +314,38 @@ class EssoraDesktop(Gtk.Window):
         self.ypos = self.desktop_settings.get_float('YPos', 0.990)
         self.xoffset = self.desktop_settings.get_int('XOffset', 0)
         self.yoffset = self.desktop_settings.get_int('YOffset', -40)
-        self.nlines = max(1, self.desktop_settings.get_int('NLines', 2))
+        self.label_lines = max(0, self.desktop_settings.get_int('NLines', 2))
         self.vertical = self.desktop_settings.get_bool('Vertical', False)
         self.reverse_pack = self.desktop_settings.get_bool('ReversePack', True)
         self.show_frame = self.desktop_settings.get_bool('ShowFrame', True)
         self.draw_shadow = self.desktop_settings.get_bool('DrawShadow', True)
         self.font_color = self.desktop_settings.get('FontColor', '#ffffffffffff') or '#ffffffffffff'
         self.shadow_color = self.desktop_settings.get('ShadowColor', '#000000000000') or '#000000000000'
-        self.mount_action = self.desktop_settings.get('MountAction', "essorafm '$dir'") or "essorafm '$dir'"
-        self.umount_action = self.desktop_settings.get('UMountAction', "essorafm -D '$dir'") or "essorafm -D '$dir'"
+        self.mount_action = "/usr/local/bin/essorafm '$dir'"
+        self.umount_action = "/usr/local/bin/essorafm -D '$dir'"
         self.open_command = self.desktop_settings.get('OpenCommand', 'essorafm') or 'essorafm'
         self.pymenu_command = self.desktop_settings.get('PymenuCommand', '/usr/local/bin/pymenu') or '/usr/local/bin/pymenu'
         self.wallpaper = os.path.expanduser(self.desktop_settings.get('Wallpaper', '') or '')
         self.wallpaper_mode = self.desktop_settings.get('WallpaperMode', 'zoom') or 'zoom'
         self.wallpaper_directory = os.path.expanduser(self.desktop_settings.get('WallpaperDirectory', '/usr/share/backgrounds') or '/usr/share/backgrounds')
-        self.desktop_dir = os.path.join(os.path.expanduser('~'), 'Desktop')
-        self.cell_w = max(96, self.spacing_x - 8)
-        self.cell_h = max(96, self.spacing_y - 8)
+        self.desktop_dir = xdg_dir(XDG.DESKTOP)
+        self.cell_w = max(96, self.icon_size + 58)
+        self.cell_h = max(104, self.icon_size + 72)
+        self.step_x = max(self.spacing_x, self.cell_w + 8)
+        self.step_y = max(self.spacing_y, self.cell_h + 8)
         self.icon_loader = IconLoader(self.icon_size)
 
     def _desktop_drive_icons_binary(self):
-        local_bin = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bin', 'desktop_drive_icons')
-        if os.path.exists(local_bin) and os.access(local_bin, os.X_OK):
-            return local_bin
-        system_bin = shutil.which('desktop_drive_icons')
-        return system_bin
+        return None
 
     def _ensure_drive_icons_config(self):
         self.desktop_settings.save()
         os.makedirs(CONFIG_DIR, exist_ok=True)
 
-        old_dir = os.path.join(os.path.expanduser('~'), '.config', 'desktop_drive_icons')
-        old_cfg = os.path.join(old_dir, 'config.ini')
-        os.makedirs(old_dir, exist_ok=True)
-        try:
-            if os.path.islink(old_cfg):
-                if os.readlink(old_cfg) != DESKTOP_DRIVES_CONFIG:
-                    os.unlink(old_cfg)
-            elif os.path.exists(old_cfg):
-                backup = old_cfg + '.bak'
-                if not os.path.exists(backup):
-                    shutil.copy2(old_cfg, backup)
-                os.remove(old_cfg)
-            if not os.path.exists(old_cfg):
-                os.symlink(DESKTOP_DRIVES_CONFIG, old_cfg)
-        except Exception:
-            try:
-                shutil.copy2(DESKTOP_DRIVES_CONFIG, old_cfg)
-            except Exception:
-                pass
-
     def _sync_external_drive_icons(self):
-        binary = self._desktop_drive_icons_binary()
-        log_dir = os.path.join(os.path.expanduser('~'), '.cache', 'essorafm')
-        os.makedirs(log_dir, exist_ok=True)
-        log_path = os.path.join(log_dir, 'desktop-drive-icons.log')
-
-        should_run = bool(self.enabled and self.use_external_drive_icons and binary)
-        if not should_run:
-            if self._drive_icons_process and self._drive_icons_process.poll() is None:
-                try:
-                    self._drive_icons_process.terminate()
-                except Exception:
-                    pass
-            self._drive_icons_process = None
-            try:
-                with open(log_path, 'a', encoding='utf-8') as log:
-                    log.write('disabled or binary missing: enabled=%s external=%s binary=%s\n' % (self.enabled, self.use_external_drive_icons, binary))
-            except Exception:
-                pass
-            return
-
-        if self._drive_icons_process and self._drive_icons_process.poll() is None:
-            return
-
-        self._ensure_drive_icons_config()
-        env = os.environ.copy()
-        env['PATH'] = '/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:' + env.get('PATH', '')
-        if not env.get('DISPLAY'):
-            env['DISPLAY'] = ':0'
-        if not env.get('XAUTHORITY'):
-            xauth = os.path.join(os.path.expanduser('~'), '.Xauthority')
-            if os.path.exists(xauth):
-                env['XAUTHORITY'] = xauth
-
-        try:
-            log = open(log_path, 'a', encoding='utf-8')
-            log.write('starting desktop_drive_icons: %s\n' % binary)
-            log.write('settings: %s\n' % DESKTOP_DRIVES_CONFIG)
-            log.flush()
-            self._drive_icons_process = subprocess.Popen([binary], stdout=log, stderr=log, env=env, cwd=os.path.expanduser('~'), close_fds=True)
-        except Exception as exc:
-            self._drive_icons_process = None
-            try:
-                with open(log_path, 'a', encoding='utf-8') as log:
-                    log.write('ERROR launching desktop_drive_icons: %s\n' % exc)
-            except Exception:
-                pass
+        return False
 
     def _on_destroy(self, *_args):
-        if self._drive_icons_process and self._drive_icons_process.poll() is None:
-            try:
-                self._drive_icons_process.terminate()
-            except Exception:
-                pass
         Gtk.main_quit()
 
     def _configure_desktop_window(self):
@@ -317,6 +363,32 @@ class EssoraDesktop(Gtk.Window):
         if screen:
             self.move(0, 0)
             self.resize(screen.get_width(), screen.get_height())
+
+    def _on_configure_event(self, *_args):
+        self._schedule_refresh(delay_ms=120)
+        return False
+
+    def _schedule_refresh(self, delay_ms=250):
+        if getattr(self, '_configure_refresh_id', 0):
+            return False
+
+        def _do_refresh():
+            self._configure_refresh_id = 0
+            self.refresh()
+            return False
+
+        self._configure_refresh_id = GLib.timeout_add(delay_ms, _do_refresh)
+        return False
+
+    def _poll_volume_changes(self):
+        try:
+            signature = self.volume_service.items_signature()
+        except Exception:
+            return True
+        if signature != getattr(self, '_last_volume_signature', None):
+            self._last_volume_signature = signature
+            self.refresh()
+        return True
 
     def _css_color(self, value, fallback):
         value = (value or '').strip()
@@ -341,6 +413,13 @@ class EssoraDesktop(Gtk.Window):
         window {{ background-color: transparent; }}
         .essorafm-desktop-label {{ color: {font}; {shadow_css} {frame_css} }}
         eventbox:hover box {{ background-color: rgba(119,150,10,0.25); border-radius: 8px; }}
+        .essorafm-eject-badge {{
+            background-color: rgba(0, 0, 0, 0.65);
+            color: #ffffff;
+            border-radius: 999px;
+            padding: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+        }}
         '''.encode('utf-8')
         provider = Gtk.CssProvider()
         provider.load_from_data(css)
@@ -423,6 +502,8 @@ class EssoraDesktop(Gtk.Window):
         return uri.startswith(('smb:', 'ftp:', 'sftp:', 'dav:')) or path.startswith(('smb:', 'ftp:', 'sftp:', 'dav:'))
 
     def _is_removable_item(self, item):
+        if item.get('removable') is True or item.get('is_usb') is True:
+            return True
         volume = item.get('volume')
         try:
             drive = volume.get_drive() if volume else None
@@ -431,14 +512,46 @@ class EssoraDesktop(Gtk.Window):
         except Exception:
             pass
         name = (item.get('name') or '').lower()
-        return any(word in name for word in ('usb', 'pendrive', 'flash', 'sd card'))
+        return any(word in name for word in ('usb', 'ventoy', 'pendrive', 'flash', 'sd card', 'removable'))
 
-    def _filtered_items(self):
+    def _is_technical_partition(self, item):
+        if item.get('hidden_desktop') or item.get('hidden_sidebar'):
+            return True
+        fstype = (item.get('fstype') or '').lower()
+        if fstype == 'swap':
+            return True
+        values_list = [item.get(k) for k in ('name', 'path', 'device', 'uuid', 'partlabel', 'parttype')]
+        values = ' '.join(str(v or '').lower() for v in values_list)
+        compact = ''.join(ch for ch in values if ch.isalnum())
+        if 'vtoyefi' in compact:
+            return True
+        if '/boot/efi' in values or 'efi system' in values:
+            return True
+        for value in values_list:
+            comp = ''.join(ch for ch in str(value or '').lower() if ch.isalnum())
+            if comp in {'efi', 'esp', 'efisystempartition', 'vtoyefi', 'swap'}:
+                return True
+        if ' esp ' in f' {values} ':
+            return True
+        if (item.get('parttype') or '').lower() in (
+            'c12a7328-f81f-11d2-ba4b-00a0c93ec93b',
+            'ef00',
+        ):
+            return True
+        return False
+
+    def _filtered_items(self, items=None):
         if not self.enabled:
             return []
-        items = [i for i in self.volume_service.list_sidebar_items() if i.get('kind') in ('mount', 'volume')]
+        if items is None:
+            items = self.volume_service.list_sidebar_items()
+        items = [i for i in items if i.get('kind') in ('mount', 'volume')]
         filtered = []
         for item in items:
+            if item.get('hidden_desktop') or item.get('hidden_sidebar'):
+                continue
+            if self._is_technical_partition(item):
+                continue
             is_network = self._is_network_item(item)
             is_removable = self._is_removable_item(item)
             if is_network and not self.show_network:
@@ -458,30 +571,69 @@ class EssoraDesktop(Gtk.Window):
         except Exception:
             return []
 
-    def _drive_position(self, index):
-        screen = Gdk.Screen.get_default()
-        width = self.get_allocated_width() or (screen.get_width() if screen else 1024)
-        height = self.get_allocated_height() or (screen.get_height() if screen else 768)
-        base_x = int(width * self.xpos) + self.xoffset
-        base_y = int(height * self.ypos) + self.yoffset
-        line = index % self.nlines
-        group = index // self.nlines
-        if self.vertical:
-            dx = group * self.spacing_x
-            dy = line * self.spacing_y
+    def _screen_size(self):
+        screen = self.get_screen() or Gdk.Screen.get_default()
+        screen_width = screen.get_width() if screen else 1024
+        screen_height = screen.get_height() if screen else 768
+        width = self.get_allocated_width()
+        height = self.get_allocated_height()
+
+        if width < 320:
+            width = screen_width
+        if height < 240:
+            height = screen_height
+        return max(1, width), max(1, height)
+
+    def _desktop_anchor(self, width, height):
+        """Return the top-left coordinate for the first drive icon cell.
+
+        XPos/YPos are anchors like in the old desktop-drive-icons tool:
+        0 = left/top and 1 = right/bottom.  Offsets are applied after anchoring.
+        This makes XPos=0, YPos=1, YOffset=-40 place the first drive icon above
+        the panel instead of clamping it on the bottom edge.
+        """
+        if self.xpos >= 0.5:
+            base_x = width - self.cell_w + self.xoffset
         else:
-            dx = line * self.spacing_x
-            dy = group * self.spacing_y
-        if self.reverse_pack:
-            dx = -dx
-            dy = -dy
-        x = max(0, min(width - self.cell_w, base_x + dx))
-        y = max(0, min(height - self.cell_h, base_y + dy))
+            base_x = self.xoffset
+
+        if self.ypos >= 0.5:
+            base_y = height - self.cell_h + self.yoffset
+        else:
+            base_y = self.yoffset
+
+        base_x = max(0, min(max(0, width - self.cell_w), base_x))
+        base_y = max(0, min(max(0, height - self.cell_h), base_y))
+        return base_x, base_y
+
+    def _drive_position(self, index):
+        width, height = self._screen_size()
+        base_x, base_y = self._desktop_anchor(width, height)
+
+        x_dir = -1 if self.xpos >= 0.5 else 1
+        y_dir = -1 if self.ypos >= 0.5 else 1
+
+        if self.vertical:
+            available_y = (base_y + self.cell_h) if y_dir < 0 else (height - base_y)
+            per_column = max(1, int(available_y // self.step_y))
+            row = index % per_column
+            col = index // per_column
+            x = base_x + (col * self.step_x * x_dir)
+            y = base_y + (row * self.step_y * y_dir)
+        else:
+            available_x = (base_x + self.cell_w) if x_dir < 0 else (width - base_x)
+            per_row = max(1, int(available_x // self.step_x))
+            col = index % per_row
+            row = index // per_row
+            x = base_x + (col * self.step_x * x_dir)
+            y = base_y + (row * self.step_y * y_dir)
+
+        x = max(0, min(max(0, width - self.cell_w), int(x)))
+        y = max(0, min(max(0, height - self.cell_h), int(y)))
         return x, y
 
     def refresh(self):
         self._reload_settings()
-        self._sync_external_drive_icons()
         self._load_wallpaper()
         self._apply_css()
         self._sync_root_wallpaper()
@@ -500,7 +652,11 @@ class EssoraDesktop(Gtk.Window):
                 y = 24
                 x += self.spacing_x
 
-        drive_items = [] if (self.use_external_drive_icons and self._desktop_drive_icons_binary()) else self._filtered_items()
+        all_volume_items = self.volume_service.list_sidebar_items()
+        self._last_volume_signature = self.volume_service.items_signature_from_items(all_volume_items)
+        drive_items = self._filtered_items(all_volume_items)
+        if self.reverse_pack:
+            drive_items = list(reversed(drive_items))
         for idx, item in enumerate(drive_items):
             icon = DesktopDriveIcon(item, self)
             dx, dy = self._drive_position(idx)
@@ -509,13 +665,46 @@ class EssoraDesktop(Gtk.Window):
         return False
 
     def open_desktop_file(self, path):
+        target = self._resolve_desktop_link(path)
         try:
-            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+            app_info = Gio.DesktopAppInfo.new_from_filename(target)
+            if app_info is not None:
+                app_info.launch([], None)
+                return
+        except Exception:
+            pass
+        try:
+            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(target, None), None)
         except Exception:
             try:
-                subprocess.Popen(['xdg-open', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.Popen(['xdg-open', target], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception as exc:
                 self._error(str(exc))
+
+    def _resolve_desktop_link(self, path):
+        """Si el .desktop es Type=Link y URL apunta a otro .desktop existente,
+        devuelve la ruta del .desktop apuntado. En cualquier otro caso,
+        devuelve la ruta original."""
+        if not path.endswith('.desktop'):
+            return path
+        try:
+            keyfile = GLib.KeyFile()
+            keyfile.load_from_file(path, GLib.KeyFileFlags.NONE)
+            try:
+                entry_type = keyfile.get_string('Desktop Entry', 'Type')
+            except Exception:
+                entry_type = ''
+            if entry_type != 'Link':
+                return path
+            try:
+                url = keyfile.get_string('Desktop Entry', 'URL')
+            except Exception:
+                return path
+            if url and url.endswith('.desktop') and os.path.isabs(url) and os.path.exists(url):
+                return url
+        except Exception:
+            pass
+        return path
 
     def popup_menu_for_desktop_file(self, path, event):
         menu = Gtk.Menu()
@@ -546,20 +735,40 @@ class EssoraDesktop(Gtk.Window):
         if item.get('mounted') and item.get('path'):
             self.open_path(item['path'])
             return
-        volume = item.get('volume')
-        if volume and item.get('can_mount', True):
-            self.volume_service.mount_volume(volume, lambda ok, err: self._after_mount(ok, err, item, open_after=True))
+        self._mount_item(item, open_after=True)
+
+    def _mount_item(self, item, open_after=False):
+        if not item:
+            return
+        self.volume_service.mount_item(item, lambda ok, err: self._after_mount(ok, err, item, open_after=open_after))
 
     def open_path(self, path):
-        if self._run_action(self.mount_action, path):
+        if not path:
             return
-        try:
-            subprocess.Popen([self.open_command, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
+        candidates = [
+            '/usr/local/bin/essorafm',
+            '/usr/local/essorafm/bin/essorafm',
+            'python3 /usr/local/essorafm/essorafm.py',
+            self.open_command,
+        ]
+        for cmd in candidates:
             try:
-                Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+                if not cmd:
+                    continue
+                argv = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
+                if not argv:
+                    continue
+                exe = argv[0]
+                if os.path.isabs(exe) and not os.path.exists(exe):
+                    continue
+                subprocess.Popen(argv + [path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return
             except Exception:
-                pass
+                continue
+        try:
+            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+        except Exception:
+            pass
 
     def _on_desktop_button_press(self, _widget, event):
         if getattr(event, 'button', 0) == 3:
@@ -591,10 +800,6 @@ class EssoraDesktop(Gtk.Window):
         refresh_item = Gtk.MenuItem(label=tr('refresh'))
         refresh_item.connect('activate', lambda *_: self.refresh())
         menu.append(refresh_item)
-        menu.append(Gtk.SeparatorMenuItem())
-        config_item = Gtk.MenuItem(label=tr('desktop_drive_config'))
-        config_item.connect('activate', lambda *_: self._edit_desktop_drive_config())
-        menu.append(config_item)
         menu.show_all()
         if event is not None:
             menu.popup_at_pointer(event)
@@ -611,21 +816,25 @@ class EssoraDesktop(Gtk.Window):
             self._error(str(exc))
 
     def choose_wallpaper(self):
-        dialog = Gtk.FileChooserDialog(title=tr('change_wallpaper'), parent=self, action=Gtk.FileChooserAction.OPEN,
-                                       buttons=(tr('cancel'), Gtk.ResponseType.CANCEL, tr('open'), Gtk.ResponseType.OK))
-        filt = Gtk.FileFilter()
-        filt.set_name('Images')
-        for mime in ('image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'image/svg+xml'):
-            filt.add_mime_type(mime)
-        dialog.add_filter(filt)
-        if os.path.isdir(self.wallpaper_directory):
-            dialog.set_current_folder(self.wallpaper_directory)
-        elif os.path.isdir('/usr/share/backgrounds'):
-            dialog.set_current_folder('/usr/share/backgrounds')
-        if dialog.run() == Gtk.ResponseType.OK:
-            path = dialog.get_filename()
-            self.desktop_settings.update({'Wallpaper': path, 'WallpaperMode': self.wallpaper_mode, 'WallpaperDirectory': os.path.dirname(path)})
-            self.refresh()
+        wdir = self.wallpaper_directory
+        if not os.path.isdir(wdir):
+            wdir = '/usr/share/backgrounds'
+        dialog = WallpaperCarouselDialog(
+            parent=self,
+            wallpaper_directory=wdir,
+            current_wallpaper=self.wallpaper,
+        )
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            path = dialog.get_selected_path()
+            new_dir = dialog.get_directory()
+            if path:
+                self.desktop_settings.update({
+                    'Wallpaper': path,
+                    'WallpaperMode': self.wallpaper_mode,
+                    'WallpaperDirectory': new_dir,
+                })
+                self.refresh()
         dialog.destroy()
 
     def add_icon_to_desktop(self):
@@ -644,7 +853,10 @@ class EssoraDesktop(Gtk.Window):
                     while os.path.exists(f'{base}-{i}{ext}'):
                         i += 1
                     dest = f'{base}-{i}{ext}'
-                shutil.copy2(src, dest)
+                if src.endswith('.desktop'):
+                    self._write_link_desktop(src, dest)
+                else:
+                    shutil.copy2(src, dest)
                 if dest.endswith('.desktop'):
                     os.chmod(dest, os.stat(dest).st_mode | 0o755)
                 self.refresh()
@@ -652,20 +864,63 @@ class EssoraDesktop(Gtk.Window):
                 self._error(str(exc))
         dialog.destroy()
 
+    def _write_link_desktop(self, source_desktop, dest_path):
+        """Crea en el escritorio un .desktop tipo Link delegando al original.
+
+        En lugar de copiar las 80+ líneas de Name[xx]/Comment[xx] del .desktop
+        de /usr/share/applications/, escribimos solo el nombre, comentario e
+        icono del idioma activo (con fallback al genérico) y apuntamos al
+        archivo original con URL=. Pymenu y EssoraFM saben seguir esa URL
+        para mostrar y lanzar la app correctamente.
+        """
+        keyfile = GLib.KeyFile()
+        try:
+            keyfile.load_from_file(source_desktop, GLib.KeyFileFlags.NONE)
+        except Exception:
+            shutil.copy2(source_desktop, dest_path)
+            return
+
+        def _get(key):
+            try:
+                value = keyfile.get_locale_string('Desktop Entry', key, None)
+                if value:
+                    return value
+            except Exception:
+                pass
+            try:
+                return keyfile.get_string('Desktop Entry', key)
+            except Exception:
+                return ''
+
+        name = _get('Name') or os.path.splitext(os.path.basename(source_desktop))[0]
+        comment = _get('Comment')
+        icon = _get('Icon')
+
+        lines = ['[Desktop Entry]', 'Type=Link', f'Name={name}']
+        if comment:
+            lines.append(f'Comment={comment}')
+        if icon:
+            lines.append(f'Icon={icon}')
+        lines.append(f'URL={source_desktop}')
+        lines.append('')
+
+        with open(dest_path, 'w', encoding='utf-8') as fh:
+            fh.write('\n'.join(lines))
+
     def popup_menu_for_item(self, item, event):
         menu = Gtk.Menu()
         if item.get('path'):
             open_item = Gtk.MenuItem(label=tr('open'))
             open_item.connect('activate', lambda *_: self.open_path(item['path']))
             menu.append(open_item)
-        if item.get('kind') == 'volume' and item.get('volume') and item.get('can_mount', True):
+        if item.get('kind') == 'volume' and (item.get('volume') or item.get('device') or item.get('can_mount')):
             mount_item = Gtk.MenuItem(label=tr('mount'))
-            mount_item.connect('activate', lambda *_: self.volume_service.mount_volume(item['volume'], lambda ok, err: self._after_mount(ok, err, item)))
+            mount_item.connect('activate', lambda *_: self._mount_item(item, open_after=False))
             menu.append(mount_item)
-        if item.get('kind') == 'mount' and item.get('mount'):
+        if item.get('kind') == 'mount':
             if item.get('can_unmount'):
                 unmount_item = Gtk.MenuItem(label=tr('unmount'))
-                unmount_item.connect('activate', lambda *_: (self._run_action(self.umount_action, item.get('path') or ''), self.volume_service.unmount_mount(item['mount'], self._after_unmount)))
+                unmount_item.connect('activate', lambda *_: self._unmount_item(item))
                 menu.append(unmount_item)
             if item.get('can_eject') and item.get('volume'):
                 eject_item = Gtk.MenuItem(label=tr('eject'))
@@ -675,24 +930,55 @@ class EssoraDesktop(Gtk.Window):
         refresh_item = Gtk.MenuItem(label=tr('refresh'))
         refresh_item.connect('activate', lambda *_: self.refresh())
         menu.append(refresh_item)
-        config_item = Gtk.MenuItem(label=tr('desktop_drive_config'))
-        config_item.connect('activate', lambda *_: self._edit_desktop_drive_config())
-        menu.append(config_item)
         menu.show_all()
         menu.popup_at_pointer(event)
+
+    def _unmount_item(self, item):
+        if not item:
+            return
+        self._run_action(self.umount_action, item.get('path') or '')
+        self.volume_service.unmount_item(item, self._after_unmount)
+
+    def unmount_item(self, item):
+        """Wrapper público invocado desde el badge de eject sobre el icono del
+        escritorio. Delega en la lógica interna de desmontaje."""
+        self._unmount_item(item)
 
     def _after_mount(self, ok, error_text, original_item=None, open_after=False):
         self.refresh()
         if ok and open_after:
-            original_name = original_item.get('name') if original_item else None
-            for item in self.volume_service.list_sidebar_items():
-                if original_name and item.get('name') != original_name:
-                    continue
-                if item.get('mounted') and item.get('path'):
-                    self.open_path(item['path'])
-                    return
+            if error_text and isinstance(error_text, str) and error_text.startswith('/'):
+                self.open_path(error_text)
+                return
+            GLib.timeout_add(700, lambda: self._open_after_mount(original_item))
         elif not ok and error_text:
             self._error(error_text)
+
+    def _open_after_mount(self, original_item=None):
+        original_name = original_item.get('name') if original_item else None
+        original_device = original_item.get('device') if original_item else None
+        original_uuid = original_item.get('uuid') if original_item else None
+        self.refresh()
+        for item in self.volume_service.list_sidebar_items():
+            if not (item.get('mounted') and item.get('path')):
+                continue
+            if original_device and item.get('device') == original_device:
+                self.open_path(item['path'])
+                return False
+            if original_uuid and item.get('uuid') == original_uuid:
+                self.open_path(item['path'])
+                return False
+            if original_name and item.get('name') == original_name:
+                self.open_path(item['path'])
+                return False
+        if original_name:
+            user = os.environ.get('USER') or os.path.basename(os.path.expanduser('~'))
+            for base in (f'/media/{user}', f'/run/media/{user}'):
+                candidate = os.path.join(base, original_name)
+                if os.path.isdir(candidate):
+                    self.open_path(candidate)
+                    return False
+        return False
 
     def _after_unmount(self, ok, error_text):
         self.refresh()
@@ -704,11 +990,43 @@ class EssoraDesktop(Gtk.Window):
         if not ok and error_text:
             self._error(error_text)
 
+    def _setting_label(self, key):
+        labels = {
+            'desktop_drive_icons': tr('desktop_drive_icons'),
+            'desktop_drive_show_internal': tr('desktop_drive_show_internal'),
+            'desktop_drive_show_removable': tr('desktop_drive_show_removable'),
+            'desktop_drive_show_network': tr('desktop_drive_show_network'),
+            'ShowLabels': tr('desktop_show_labels'),
+            'ShowDesktopFiles': tr('desktop_show_files'),
+            'ShowFrame': tr('desktop_show_frame'),
+            'Vertical': tr('desktop_vertical'),
+            'ReversePack': tr('desktop_reverse_pack'),
+            'DrawShadow': tr('desktop_draw_shadow'),
+            'desktop_orientation': tr('desktop_orientation'),
+            'XPos': tr('desktop_xpos'),
+            'YPos': tr('desktop_ypos'),
+            'XOffset': tr('desktop_xoffset'),
+            'YOffset': tr('desktop_yoffset'),
+            'NLines': tr('desktop_nlines'),
+            'desktop_drive_icon_size': tr('desktop_drive_icon_size'),
+            'SpacingX': tr('desktop_spacing_x'),
+            'SpacingY': tr('desktop_spacing_y'),
+            'LabelWidth': tr('desktop_label_width'),
+            'FontColor': tr('desktop_font_color'),
+            'ShadowColor': tr('desktop_shadow_color'),
+            'MountAction': tr('desktop_mount_action'),
+            'UMountAction': tr('desktop_umount_action'),
+            'PymenuCommand': tr('desktop_pymenu_command'),
+            'WallpaperDirectory': tr('desktop_wallpaper_directory'),
+        }
+        value = labels.get(key, key)
+        return value if value != key else key
+
     def _edit_desktop_drive_config(self):
         self.desktop_settings.load()
         dialog = Gtk.Dialog(title=tr('desktop_drive_config'), transient_for=self, flags=0,
                             buttons=(tr('cancel'), Gtk.ResponseType.CANCEL, tr('save'), Gtk.ResponseType.OK))
-        dialog.set_default_size(560, 540)
+        dialog.set_default_size(620, 560)
         content = dialog.get_content_area()
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
@@ -719,29 +1037,71 @@ class EssoraDesktop(Gtk.Window):
         checks = {}
         entries = {}
         row = 0
-        for key in ('Enabled', 'UseExternalDriveIcons', 'ShowInternal', 'ShowRemovable', 'ShowNetwork', 'ShowLabels', 'ShowDesktopFiles', 'ShowFrame', 'Vertical', 'ReversePack', 'DrawShadow'):
-            chk = Gtk.CheckButton(label=key)
+
+        info_top = Gtk.Label(label=tr('desktop_internal_notice'), xalign=0)
+        info_top.set_line_wrap(True)
+        grid.attach(info_top, 0, row, 2, 1)
+        row += 1
+
+        check_keys = (
+            'desktop_drive_icons',
+            'desktop_drive_show_internal',
+            'desktop_drive_show_removable',
+            'desktop_drive_show_network',
+            'ShowLabels',
+            'ShowDesktopFiles',
+            'ShowFrame',
+            'ReversePack',
+            'DrawShadow',
+        )
+        for key in check_keys:
+            chk = Gtk.CheckButton(label=self._setting_label(key))
             chk.set_active(self.desktop_settings.get_bool(key, False))
             checks[key] = chk
             grid.attach(chk, 0, row, 2, 1)
             row += 1
 
-        for key in ('XPos', 'YPos', 'XOffset', 'YOffset', 'NLines', 'IconSize', 'SpacingX', 'SpacingY', 'LabelWidth', 'FontColor', 'ShadowColor', 'MountAction', 'UMountAction', 'PymenuCommand', 'WallpaperDirectory'):
-            grid.attach(Gtk.Label(label=key, xalign=0), 0, row, 1, 1)
+        grid.attach(Gtk.Label(label=tr('desktop_orientation'), xalign=0), 0, row, 1, 1)
+        orientation_combo = Gtk.ComboBoxText()
+        orientation_combo.append('horizontal', tr('desktop_orientation_horizontal'))
+        orientation_combo.append('vertical', tr('desktop_orientation_vertical'))
+        orientation_combo.set_active_id('vertical' if self.desktop_settings.get_bool('Vertical', False) else 'horizontal')
+        grid.attach(orientation_combo, 1, row, 1, 1)
+        row += 1
+
+        entry_keys = (
+            'XPos', 'YPos', 'XOffset', 'YOffset', 'NLines',
+            'desktop_drive_icon_size', 'SpacingX', 'SpacingY', 'LabelWidth',
+            'FontColor', 'ShadowColor', 'MountAction', 'UMountAction',
+            'PymenuCommand', 'WallpaperDirectory'
+        )
+        locked = {'MountAction', 'UMountAction'}
+        for key in entry_keys:
+            grid.attach(Gtk.Label(label=self._setting_label(key), xalign=0), 0, row, 1, 1)
             ent = Gtk.Entry()
             ent.set_text(str(self.desktop_settings.get(key, '')))
+            if key in locked:
+                ent.set_editable(False)
+                ent.set_sensitive(False)
+                ent.set_tooltip_text(tr('desktop_action_locked'))
             entries[key] = ent
             grid.attach(ent, 1, row, 1, 1)
             row += 1
 
-        info = Gtk.Label(label=DESKTOP_DRIVES_CONFIG, xalign=0)
+        info = Gtk.Label(label=f"{tr('config_file')}: {DESKTOP_DRIVES_CONFIG}", xalign=0)
         info.set_selectable(True)
+        info.set_line_wrap(True)
         grid.attach(info, 0, row, 2, 1)
 
         dialog.show_all()
         if dialog.run() == Gtk.ResponseType.OK:
             data = {key: str(widget.get_active()).lower() for key, widget in checks.items()}
-            data.update({key: widget.get_text() for key, widget in entries.items()})
+            data['Vertical'] = 'true' if orientation_combo.get_active_id() == 'vertical' else 'false'
+            for key, widget in entries.items():
+                if key not in locked:
+                    data[key] = widget.get_text()
+            data['MountAction'] = "/usr/local/bin/essorafm '$dir'"
+            data['UMountAction'] = "/usr/local/bin/essorafm -D '$dir'"
             self.desktop_settings.update(data)
             self.refresh()
         dialog.destroy()
@@ -767,7 +1127,5 @@ def run_desktop():
 
     win = EssoraDesktop()
     win.show_all()
-
-    GLib.idle_add(win._sync_external_drive_icons)
 
     Gtk.main()

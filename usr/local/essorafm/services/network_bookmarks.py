@@ -1,5 +1,5 @@
 # EssoraFM - Network bookmarks service (SMB, FTP, SSH, WebDAV, NFS)
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 #
 # Motor de montaje (en orden de prioridad):
 #   1. rclone mount  — universal, soporta todos los protocolos sin root
@@ -17,6 +17,8 @@ import threading
 from urllib.parse import urlparse, urlunparse
 
 from gi.repository import GLib
+
+from core.i18n import tr
 
 
 CONFIG_DIR     = os.path.join(os.path.expanduser('~'), '.config', 'essorafm')
@@ -39,10 +41,8 @@ def scheme_label(uri):
     for scheme, (prefix, label) in SUPPORTED_SCHEMES.items():
         if uri.startswith(prefix) or uri.startswith(scheme + '://'):
             return label
-    return 'Red'
+    return tr('net_section_default_label')
 
-
-# ── Detección de herramientas disponibles ─────────────────────────────────────
 
 def _has(cmd):
     return shutil.which(cmd) is not None
@@ -66,10 +66,8 @@ def _best_engine(scheme):
     return None
 
 
-# ── Construcción de comandos de montaje ───────────────────────────────────────
-
 def _mount_dir(uri):
-    """Carpeta local donde se montará la URI (~/. cache/essorafm/mounts/<hash>)."""
+    """Carpeta local donde se montará la URI (~/.cache/essorafm/mounts/<hash>)."""
     import hashlib
     tag = hashlib.md5(uri.encode()).hexdigest()[:12]
     return os.path.join(MOUNT_BASE, tag)
@@ -80,7 +78,7 @@ def _cmd_rclone(scheme, host, port, path, user, password, mount_point):
     rclone mount --config /dev/null  (sin archivo de configuración)
     Usa flags inline para pasar credenciales directamente.
     """
-    # Tipo de backend rclone según protocolo
+
     rclone_type = {
         'smb': 'smb', 'ftp': 'ftp', 'ftps': 'ftp',
         'sftp': 'sftp', 'ssh': 'sftp',
@@ -88,7 +86,7 @@ def _cmd_rclone(scheme, host, port, path, user, password, mount_point):
         'nfs': 'nfs',
     }.get(scheme, 'sftp')
 
-    remote = f':{ rclone_type},'
+    remote = f':{rclone_type},'
     params = []
 
     if rclone_type == 'smb':
@@ -164,7 +162,7 @@ def _rclone_obscure(password):
             capture_output=True, text=True, timeout=5)
         return result.stdout.strip()
     except Exception:
-        return password  # fallback: pasar en texto plano (funciona en algunos backends)
+        return password  
 
 
 def _cmd_sshfs(host, port, path, user, password, mount_point):
@@ -200,7 +198,6 @@ def _cmd_mount_cifs(host, path, user, password, mount_point):
     return ['sudo', 'mount', '-t', 'cifs', share, mount_point, '-o', ','.join(opts)]
 
 
-# ── Servicio principal ────────────────────────────────────────────────────────
 
 class NetworkBookmarkService:
     """Gestiona favoritos de red con montaje multi-motor."""
@@ -209,10 +206,8 @@ class NetworkBookmarkService:
         os.makedirs(CONFIG_DIR, exist_ok=True)
         os.makedirs(MOUNT_BASE, exist_ok=True)
         self._bookmarks = self._load()
-        # {uri: Popen} para procesos de montaje en background (rclone --daemon)
         self._procs = {}
 
-    # ── Persistencia ──────────────────────────────────────────────────────────
 
     def _load(self):
         try:
@@ -260,18 +255,16 @@ class NetworkBookmarkService:
                 self._save()
                 return
 
-    # ── Estado de montaje ─────────────────────────────────────────────────────
 
     def is_mounted(self, uri):
         mp = _mount_dir(uri)
         if not os.path.isdir(mp):
             return False
-        # Verificar que realmente hay algo montado (no solo el dir vacío)
         try:
             entries = os.listdir(mp)
-            return True  # si no lanza excepción, está montado o accesible
+            return True 
         except PermissionError:
-            return True  # montado pero sin acceso de lectura
+            return True 
         except Exception:
             return False
 
@@ -279,7 +272,6 @@ class NetworkBookmarkService:
         mp = _mount_dir(uri)
         return mp if self.is_mounted(uri) else ''
 
-    # ── Montaje ───────────────────────────────────────────────────────────────
 
     def mount(self, bookmark, password='', callback=None):
         """Detecta la mejor herramienta y monta en background."""
@@ -296,15 +288,12 @@ class NetworkBookmarkService:
         def _worker():
             try:
                 if not engine:
-                    GLib.idle_add(callback, False,
-                        'No se encontró ninguna herramienta de montaje.\n'
-                        'Instala: rclone, sshfs, curlftpfs o mount.cifs')
+                    GLib.idle_add(callback, False, tr('net_no_mount_tool'))
                     return
 
                 mp = _mount_dir(uri)
                 os.makedirs(mp, exist_ok=True)
 
-                # Construir comando según motor
                 if engine == 'rclone':
                     cmd = _cmd_rclone(scheme, host, port, path,
                                       username, password, mp)
@@ -314,7 +303,7 @@ class NetworkBookmarkService:
                     cmd = _cmd_curlftpfs(host, port, path, username, password, mp)
                 elif engine == 'mount.cifs':
                     cmd = _cmd_mount_cifs(host, path, username, password, mp)
-                else:  # gio
+                else:  
                     full_uri = _inject_user(uri, username)
                     cmd = ['gio', 'mount', full_uri]
 
@@ -325,7 +314,6 @@ class NetworkBookmarkService:
                     stderr=subprocess.PIPE,
                 )
 
-                # Para gio, enviar credenciales por stdin si hace falta
                 inp = ''
                 if engine == 'gio':
                     if username: inp += username + '\n'
@@ -337,35 +325,32 @@ class NetworkBookmarkService:
                         timeout=30)
                 except subprocess.TimeoutExpired:
                     proc.kill()
-                    GLib.idle_add(callback, False, 'Tiempo de espera agotado')
+                    GLib.idle_add(callback, False, tr('net_timeout'))
                     return
 
                 rc   = proc.returncode
                 out  = (stdout + stderr).decode(errors='replace').strip()
 
-                # rclone con --daemon devuelve 0 inmediatamente; esperar montaje
                 if engine == 'rclone' and rc == 0:
                     import time
-                    for _ in range(20):   # hasta 10 segundos
+                    for _ in range(20):   
                         time.sleep(0.5)
                         if os.path.ismount(mp):
                             break
 
                 if rc == 0 or (engine == 'gio' and 'already mounted' in out.lower()):
-                    # Para gio, buscar en gvfs; para los demás, usar mp directo
+
                     if engine == 'gio':
                         real_path = _find_gvfs_path(uri) or mp
                     else:
                         real_path = mp
                     GLib.idle_add(callback, True, real_path)
                 else:
-                    # Limpiar directorio de montaje vacío
                     try:
                         os.rmdir(mp)
                     except Exception:
                         pass
                     msg = out or f'{engine} falló (código {rc})'
-                    # Sugerencia amigable
                     if engine != 'rclone' and not _has('rclone'):
                         msg += '\n\nSugerencia: instala rclone para mejor compatibilidad:\n  sudo apt install rclone'
                     GLib.idle_add(callback, False, msg)
@@ -376,7 +361,6 @@ class NetworkBookmarkService:
         if callback:
             threading.Thread(target=_worker, daemon=True).start()
 
-    # ── Desmontaje ────────────────────────────────────────────────────────────
 
     def unmount(self, uri, callback=None):
         """Desmonta usando fusermount3/fusermount o umount."""
@@ -394,6 +378,43 @@ class NetworkBookmarkService:
         threading.Thread(target=_worker, daemon=True).start()
 
 
+    def list_network_folders(self):
+        """
+        Listar carpetas de red disponibles en el entorno (navegación nativa).
+        
+        Esto puede incluir:
+        - Servidores Samba detectados en la red local (usando smbtree)
+        - NFS exports detectados
+        - Servidores Avahi/Bonjour
+        
+        Por ahora retorna lista vacía, pero puedes expandir esta funcionalidad
+        según tus necesidades.
+        """
+        network_folders = []
+        
+
+        import os
+        uid = os.getuid()
+        gvfs_path = f'/run/user/{uid}/gvfs'
+        if os.path.isdir(gvfs_path):
+            try:
+                for entry in os.listdir(gvfs_path):
+                    if entry and not entry.startswith('.'):
+                        display_name = entry.replace('_', ' ').replace('-', ' ')
+                        if ':' in entry:
+                            parts = entry.split(':')
+                            if len(parts) >= 2:
+                                display_name = parts[0].upper() + ' - ' + parts[1].split(',')[0]
+                        network_folders.append({
+                            'name': display_name,
+                            'path': os.path.join(gvfs_path, entry)
+                        })
+            except Exception:
+                pass
+        
+        return network_folders
+
+
 def _do_umount(mount_point):
     """Intenta desmontar con fusermount3, fusermount o umount."""
     for cmd in (
@@ -409,10 +430,8 @@ def _do_umount(mount_point):
                 return True, ''
         except Exception:
             continue
-    return False, f'No se pudo desmontar {mount_point}'
+    return False, tr('net_unmount_failed').format(path=mount_point)
 
-
-# ── Utilidades ────────────────────────────────────────────────────────────────
 
 def _inject_user(uri, username):
     if not username:

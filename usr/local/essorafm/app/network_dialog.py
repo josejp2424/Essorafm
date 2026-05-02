@@ -1,5 +1,5 @@
 # EssoraFM - Diálogo compacto para agregar conexión de red
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 
 import gi
 gi.require_version('Gtk', '3.0')

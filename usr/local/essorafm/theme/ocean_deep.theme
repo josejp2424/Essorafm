@@ -1,0 +1,60 @@
+[Theme]
+Id = ocean_deep
+Name = Ocean Deep
+Name[es] = Océano Profundo
+Name[ca] = Oceà Profund
+Name[de] = Tiefer Ozean
+Name[fr] = Océan Profond
+Name[it] = Oceano Profondo
+Name[pt] = Oceano Profundo
+Name[hu] = Mély Óceán
+Name[ja] = 深海
+Name[ru] = Глубокий Океан
+Name[zh] = 深海
+Name[ar] = أعماق المحيط
+Description = Deep ocean blues, water-inspired palette
+Description[es] = Azules oceánicos profundos, paleta inspirada en el agua
+Description[ca] = Blaus oceànics profunds, paleta inspirada en l'aigua
+Description[de] = Tiefe Ozeanblautöne, vom Wasser inspirierte Palette
+Description[fr] = Bleus océaniques profonds, palette inspirée de l'eau
+Description[it] = Blu oceanici profondi, palette ispirata all'acqua
+Description[pt] = Azuis oceânicos profundos, paleta inspirada na água
+Description[hu] = Mély óceánkékek, víz ihlette színpaletta
+Description[ja] = 深い海の青、水にインスパイアされたパレット
+Description[ru] = Глубокие океанские синие тона, палитра, вдохновлённая водой
+Description[zh] = 深海蓝调,水的灵感配色
+Description[ar] = درجات زرقاء عميقة مستوحاة من أعماق المحيط
+Author = josejp2424
+Version = 1.0
+Emoji = 🌊
+
+[CSS]
+Code =
+    window, .essorafm-root { background-color: #0a1628; }
+    headerbar {
+        background-color: #0d1f3c;
+        border-bottom: 2px solid #00b4d8;
+        color: #caf0f8;
+    }
+    headerbar button { color: #caf0f8; }
+    .essorafm-sidebar-box, .essorafm-sidebar,
+    .essorafm-sidebar-tree { background-color: #0c1a30; }
+    .essorafm-sidebar-tree.view {
+        background-color: #0c1a30; color: #90e0ef;
+    }
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #023e8a; color: #caf0f8;
+    }
+    .essorafm-content, .essorafm-toolbar { background-color: #0a1628; }
+    treeview.view { background-color: #0b1a2e; color: #ade8f4; }
+    .essorafm-tabs { background-color: #0a1628; }
+    .essorafm-tabs tab {
+        background-color: #0d1f3c; color: #4cc9f0;
+        border-radius: 10px 10px 0 0;
+    }
+    .essorafm-tabs tab:hover { background-color: #122848; color: #90e0ef; }
+    .essorafm-tabs tab:checked {
+        background-color: #023e8a; color: #caf0f8;
+        box-shadow: 0 -2px 0 0 #00b4d8;
+    }

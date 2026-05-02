@@ -1,0 +1,60 @@
+[Theme]
+Id = ember
+Name = Ember
+Name[es] = Brasa
+Name[ca] = Brasa
+Name[de] = Glut
+Name[fr] = Braise
+Name[it] = Brace
+Name[pt] = Brasa
+Name[hu] = Parázs
+Name[ja] = 残り火
+Name[ru] = Уголёк
+Name[zh] = 余烬
+Name[ar] = جمر
+Description = Warm orange and red tones, fire-inspired
+Description[es] = Tonos cálidos naranjas y rojos, inspirado en fuego
+Description[ca] = Tons càlids taronges i rojos, inspirat en el foc
+Description[de] = Warme Orange- und Rottöne, vom Feuer inspiriert
+Description[fr] = Tons chauds oranges et rouges, inspiré du feu
+Description[it] = Toni caldi arancioni e rossi, ispirato al fuoco
+Description[pt] = Tons quentes laranjas e vermelhos, inspirado no fogo
+Description[hu] = Meleg narancs és piros tónusok, tűz ihlette
+Description[ja] = 暖かなオレンジと赤、炎にインスパイアされた配色
+Description[ru] = Тёплые оранжевые и красные тона, вдохновлённые огнём
+Description[zh] = 温暖的橙红色调,火焰灵感
+Description[ar] = درجات برتقالية وحمراء دافئة مستوحاة من النار
+Author = josejp2424
+Version = 1.0
+Emoji = 🔥
+
+[CSS]
+Code =
+    window, .essorafm-root { background-color: #0f0a06; }
+    headerbar {
+        background-color: #1a0f08;
+        border-bottom: 2px solid #ff6b35;
+        color: #ffe8d9;
+    }
+    headerbar button { color: #ffe8d9; }
+    .essorafm-sidebar-box, .essorafm-sidebar,
+    .essorafm-sidebar-tree { background-color: #160c06; }
+    .essorafm-sidebar-tree.view {
+        background-color: #160c06; color: #ffd6b8;
+    }
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #7c2d12; color: #ffedd5;
+    }
+    .essorafm-content, .essorafm-toolbar { background-color: #0f0a06; }
+    treeview.view { background-color: #110b07; color: #fde8d8; }
+    .essorafm-tabs { background-color: #0f0a06; }
+    .essorafm-tabs tab {
+        background-color: #1a0f08; color: #fb923c;
+        border-radius: 10px 10px 0 0;
+    }
+    .essorafm-tabs tab:hover { background-color: #22140a; color: #ff6b35; }
+    .essorafm-tabs tab:checked {
+        background-color: #7c2d12; color: #ffedd5;
+        box-shadow: 0 -2px 0 0 #ff6b35;
+    }

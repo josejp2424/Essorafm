@@ -64,15 +64,60 @@ headerbar {
     border-radius: 7px;
 }
 
+/* ============================================
+   ESTILOS MEJORADOS PARA PESTAÑAS - MÁS ANCHAS
+   ============================================ */
+.essorafm-tabs {
+    background: #242424;
+}
+
 .essorafm-tabs tab {
-    padding: 3px 8px;
-    border-radius: 7px 7px 0 0;
+    padding: 8px 16px;          /* Más padding horizontal */
+    margin: 2px 2px;
+    min-width: 160px;           /* Ancho mínimo MUY superior */
+    min-height: 36px;
+    background: #2d2d2d;
+    color: #cccccc;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s ease;
+}
+
+.essorafm-tabs tab:hover {
+    background: #3a3a3a;
+    color: #ffffff;
+}
+
+.essorafm-tabs tab:checked {
+    background: #3a4a1a;
+    color: #ffffff;
+}
+
+.essorafm-tab-label {
+    padding: 4px 8px;
+}
+
+.essorafm-tab-label label {
+    font-size: 12px;
+    font-weight: normal;
+    margin: 0 10px;
+    min-width: 100px;           /* Ancho mínimo para el texto */
 }
 
 .essorafm-tab-close {
-    padding: 0 2px;
-    min-width: 18px;
-    min-height: 18px;
+    padding: 3px;
+    margin-left: 8px;
+    min-width: 26px;
+    min-height: 26px;
+    border-radius: 13px;
+    background: transparent;
+}
+
+.essorafm-tab-close:hover {
+    background-color: rgba(255, 60, 60, 0.3);
+}
+
+.essorafm-tab-close:active {
+    background-color: rgba(255, 0, 0, 0.5);
 }
 
 .essorafm-status {
@@ -93,7 +138,6 @@ button.about-green, button.about-green label {
     color: #99AE47;
 }
 
-
 .essorafm-sidebar-art-box {
     background: #303030;
     padding: 8px 8px 12px 8px;
@@ -103,6 +147,7 @@ button.about-green, button.about-green label {
 .essorafm-sidebar-art {
     opacity: 0.96;
 }
+
 /* Forzar texto debajo de iconos en IconView */
 .essorafm-iconview {
     -GtkIconView-cell-padding: 6px;
@@ -116,3 +161,275 @@ button.about-green, button.about-green label {
 .essorafm-iconview .view {
     -gtk-icon-view-text-below: 1;
 }
+
+/* ============================================================
+   OPCIONES DE ESTILO MODERNO
+   ============================================================ */
+
+/* Esquinas redondeadas / tarjetas */
+.essorafm-theme-rounded .essorafm-sidebar-tree.view {
+    border-radius: 10px;
+    margin: 4px;
+}
+
+.essorafm-theme-cards treeview.view,
+.essorafm-theme-cards .essorafm-content {
+    border-radius: 12px;
+    margin: 6px;
+    padding: 4px;
+}
+
+/* ============================================================
+   TEMA: NEON CYBER  (azul eléctrico / cyberpunk)
+   ============================================================ */
+.theme-neon-cyber window,
+.theme-neon-cyber .essorafm-root {
+    background: #050a0f;
+}
+.theme-neon-cyber headerbar {
+    background: #0a1520;
+    border-bottom: 2px solid #00d4ff;
+    color: #e0f7ff;
+}
+.theme-neon-cyber .essorafm-sidebar-box,
+.theme-neon-cyber .essorafm-sidebar,
+.theme-neon-cyber .essorafm-sidebar-tree {
+    background: #080f18;
+}
+.theme-neon-cyber .essorafm-sidebar-tree.view {
+    background: #080f18;
+    color: #b0e8ff;
+    border-right: 1px solid #00d4ff22;
+}
+.theme-neon-cyber .essorafm-sidebar-tree.view:selected,
+.theme-neon-cyber .essorafm-sidebar-tree.view:selected:focus {
+    background: #003a4f;
+    color: #00d4ff;
+}
+.theme-neon-cyber .essorafm-content,
+.theme-neon-cyber .essorafm-toolbar {
+    background: #050a0f;
+}
+.theme-neon-cyber treeview.view {
+    background: #060c14;
+    color: #c8e8ff;
+}
+.theme-neon-cyber .essorafm-tabs tab {
+    background: #0a1520;
+    color: #80ccdd;
+    border-radius: 10px 10px 0 0;
+}
+.theme-neon-cyber .essorafm-tabs tab:hover {
+    background: #0d1e2e;
+    color: #00d4ff;
+}
+.theme-neon-cyber .essorafm-tabs tab:checked {
+    background: #003a4f;
+    color: #00d4ff;
+    box-shadow: 0 -2px 0 0 #00d4ff;
+}
+.theme-neon-cyber .essorafm-toolbutton:hover {
+    background: #00d4ff22;
+    border-radius: 8px;
+}
+
+/* ============================================================
+   TEMA: AURORA  (violeta/púrpura futurista)
+   ============================================================ */
+.theme-aurora window,
+.theme-aurora .essorafm-root {
+    background: #0d0618;
+}
+.theme-aurora headerbar {
+    background: #130920;
+    border-bottom: 2px solid #7c3aed;
+    color: #e8d5ff;
+}
+.theme-aurora .essorafm-sidebar-box,
+.theme-aurora .essorafm-sidebar,
+.theme-aurora .essorafm-sidebar-tree {
+    background: #100720;
+}
+.theme-aurora .essorafm-sidebar-tree.view {
+    background: #100720;
+    color: #d8b4fe;
+    border-right: 1px solid #7c3aed33;
+}
+.theme-aurora .essorafm-sidebar-tree.view:selected,
+.theme-aurora .essorafm-sidebar-tree.view:selected:focus {
+    background: #3b0764;
+    color: #e9d5ff;
+}
+.theme-aurora .essorafm-content,
+.theme-aurora .essorafm-toolbar {
+    background: #0d0618;
+}
+.theme-aurora treeview.view {
+    background: #0f0720;
+    color: #ddd6fe;
+}
+.theme-aurora .essorafm-tabs tab {
+    background: #130920;
+    color: #a78bfa;
+    border-radius: 10px 10px 0 0;
+}
+.theme-aurora .essorafm-tabs tab:hover {
+    background: #1e0f2e;
+    color: #c4b5fd;
+}
+.theme-aurora .essorafm-tabs tab:checked {
+    background: #3b0764;
+    color: #e9d5ff;
+    box-shadow: 0 -2px 0 0 #7c3aed;
+}
+
+/* ============================================================
+   TEMA: CARBON  (gris carbono minimalista)
+   ============================================================ */
+.theme-carbon window,
+.theme-carbon .essorafm-root {
+    background: #1a1a1a;
+}
+.theme-carbon headerbar {
+    background: #1f1f1f;
+    border-bottom: 2px solid #9ca3af;
+    color: #f3f4f6;
+}
+.theme-carbon .essorafm-sidebar-box,
+.theme-carbon .essorafm-sidebar,
+.theme-carbon .essorafm-sidebar-tree {
+    background: #222222;
+}
+.theme-carbon .essorafm-sidebar-tree.view {
+    background: #222222;
+    color: #e5e7eb;
+    border-right: 1px solid #37373744;
+}
+.theme-carbon .essorafm-sidebar-tree.view:selected,
+.theme-carbon .essorafm-sidebar-tree.view:selected:focus {
+    background: #374151;
+    color: #f9fafb;
+}
+.theme-carbon .essorafm-content,
+.theme-carbon .essorafm-toolbar {
+    background: #1a1a1a;
+}
+.theme-carbon treeview.view {
+    background: #1c1c1c;
+    color: #e5e7eb;
+}
+.theme-carbon .essorafm-tabs tab {
+    background: #252525;
+    color: #9ca3af;
+    border-radius: 8px 8px 0 0;
+}
+.theme-carbon .essorafm-tabs tab:hover {
+    background: #2d2d2d;
+    color: #e5e7eb;
+}
+.theme-carbon .essorafm-tabs tab:checked {
+    background: #374151;
+    color: #f9fafb;
+    box-shadow: 0 -2px 0 0 #9ca3af;
+}
+
+/* ============================================================
+   TEMA: OCEAN DEEP  (azul profundo nocturno)
+   ============================================================ */
+.theme-ocean-deep window,
+.theme-ocean-deep .essorafm-root {
+    background: #0a1628;
+}
+.theme-ocean-deep headerbar {
+    background: #0d1f3c;
+    border-bottom: 2px solid #00b4d8;
+    color: #caf0f8;
+}
+.theme-ocean-deep .essorafm-sidebar-box,
+.theme-ocean-deep .essorafm-sidebar,
+.theme-ocean-deep .essorafm-sidebar-tree {
+    background: #0c1a30;
+}
+.theme-ocean-deep .essorafm-sidebar-tree.view {
+    background: #0c1a30;
+    color: #90e0ef;
+    border-right: 1px solid #00b4d822;
+}
+.theme-ocean-deep .essorafm-sidebar-tree.view:selected,
+.theme-ocean-deep .essorafm-sidebar-tree.view:selected:focus {
+    background: #023e8a;
+    color: #caf0f8;
+}
+.theme-ocean-deep .essorafm-content,
+.theme-ocean-deep .essorafm-toolbar {
+    background: #0a1628;
+}
+.theme-ocean-deep treeview.view {
+    background: #0b1a2e;
+    color: #ade8f4;
+}
+.theme-ocean-deep .essorafm-tabs tab {
+    background: #0d1f3c;
+    color: #4cc9f0;
+    border-radius: 10px 10px 0 0;
+}
+.theme-ocean-deep .essorafm-tabs tab:hover {
+    background: #122848;
+    color: #90e0ef;
+}
+.theme-ocean-deep .essorafm-tabs tab:checked {
+    background: #023e8a;
+    color: #caf0f8;
+    box-shadow: 0 -2px 0 0 #00b4d8;
+}
+
+/* ============================================================
+   TEMA: EMBER  (naranja/rojo fuego)
+   ============================================================ */
+.theme-ember window,
+.theme-ember .essorafm-root {
+    background: #0f0a06;
+}
+.theme-ember headerbar {
+    background: #1a0f08;
+    border-bottom: 2px solid #ff6b35;
+    color: #ffe8d9;
+}
+.theme-ember .essorafm-sidebar-box,
+.theme-ember .essorafm-sidebar,
+.theme-ember .essorafm-sidebar-tree {
+    background: #160c06;
+}
+.theme-ember .essorafm-sidebar-tree.view {
+    background: #160c06;
+    color: #ffd6b8;
+    border-right: 1px solid #ff6b3522;
+}
+.theme-ember .essorafm-sidebar-tree.view:selected,
+.theme-ember .essorafm-sidebar-tree.view:selected:focus {
+    background: #7c2d12;
+    color: #ffedd5;
+}
+.theme-ember .essorafm-content,
+.theme-ember .essorafm-toolbar {
+    background: #0f0a06;
+}
+.theme-ember treeview.view {
+    background: #110b07;
+    color: #fde8d8;
+}
+.theme-ember .essorafm-tabs tab {
+    background: #1a0f08;
+    color: #fb923c;
+    border-radius: 10px 10px 0 0;
+}
+.theme-ember .essorafm-tabs tab:hover {
+    background: #22140a;
+    color: #ff6b35;
+}
+.theme-ember .essorafm-tabs tab:checked {
+    background: #7c2d12;
+    color: #ffedd5;
+    box-shadow: 0 -2px 0 0 #ff6b35;
+}
+

@@ -1,5 +1,5 @@
 # EssoraFM - CopyEngine con soporte pkexec para destinos sin permiso
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 
 import os
 import shutil

@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
 import gi
 
@@ -22,7 +22,6 @@ class PathBar(Gtk.Box):
         self.on_search_changed  = on_search_changed
         self._search_visible    = False
 
-        # ── Botón Inicio ──────────────────────────────────────────────
         home_btn = Gtk.Button()
         home_btn.get_style_context().add_class('essorafm-toolbutton')
         home_btn.set_tooltip_text(tr('home_folder'))
@@ -30,20 +29,17 @@ class PathBar(Gtk.Box):
         home_btn.connect('clicked', lambda _: self.on_activate(os.path.expanduser('~')))
         self.pack_start(home_btn, False, False, 0)
 
-        # ── Entrada de ruta ───────────────────────────────────────────
         self.entry = Gtk.Entry()
         self.entry.get_style_context().add_class('essorafm-pathbar')
         self.entry.set_hexpand(True)
         self.entry.connect('activate', self._emit_activate)
         self.pack_start(self.entry, True, True, 0)
 
-        # ── Separador visual ─────────────────────────────────────────
         sep = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
         sep.set_margin_start(2)
         sep.set_margin_end(2)
         self.pack_start(sep, False, False, 0)
 
-        # ── Campo de búsqueda (inline) ────────────────────────────────
         self.search_entry = Gtk.SearchEntry()
         self.search_entry.set_placeholder_text(tr('search_placeholder'))
         self.search_entry.set_width_chars(18)
@@ -51,7 +47,6 @@ class PathBar(Gtk.Box):
         self.search_entry.connect('key-press-event', self._on_search_key)
         self.pack_start(self.search_entry, False, False, 0)
 
-        # ── Botón limpiar búsqueda ────────────────────────────────────
         self.clear_btn = Gtk.Button()
         self.clear_btn.get_style_context().add_class('essorafm-toolbutton')
         self.clear_btn.set_tooltip_text(tr('clear_search'))
@@ -61,7 +56,6 @@ class PathBar(Gtk.Box):
         self.clear_btn.hide()
         self.pack_start(self.clear_btn, False, False, 0)
 
-    # ── Ruta ──────────────────────────────────────────────────────────
 
     def set_path(self, path):
         self.entry.set_text(path or '')
@@ -71,11 +65,9 @@ class PathBar(Gtk.Box):
         if path:
             self.on_activate(path)
 
-    # ── Búsqueda ──────────────────────────────────────────────────────
 
     def _on_search_changed(self, entry):
         text = entry.get_text()
-        # Mostrar/ocultar botón de limpiar
         if text:
             self.clear_btn.show()
         else:

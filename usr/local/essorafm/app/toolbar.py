@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import gi
 
 gi.require_version('Gtk', '3.0')
@@ -9,10 +9,12 @@ from core.i18n import tr
 
 
 TOOLBAR_STYLE_ICONS_ONLY  = 'icons_only'
+TOOLBAR_STYLE_ICONS_FLAT  = 'icons_flat'
 TOOLBAR_STYLE_TEXT_BELOW  = 'text_below'
 TOOLBAR_STYLE_TEXT_RIGHT  = 'text_right'
 TOOLBAR_STYLES = [
     (TOOLBAR_STYLE_ICONS_ONLY, 'toolbar_style_icons_only'),
+    (TOOLBAR_STYLE_ICONS_FLAT, 'toolbar_style_icons_flat'),
     (TOOLBAR_STYLE_TEXT_BELOW, 'toolbar_style_text_below'),
     (TOOLBAR_STYLE_TEXT_RIGHT, 'toolbar_style_text_right'),
 ]
@@ -218,6 +220,10 @@ class Toolbar(Gtk.ScrolledWindow):
             img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DND)
             img.set_pixel_size(icon_size)
             return img
+        elif style == TOOLBAR_STYLE_ICONS_FLAT:
+            img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DND)
+            img.set_pixel_size(icon_size)
+            return img
         elif style == TOOLBAR_STYLE_TEXT_BELOW:
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
             box.set_halign(Gtk.Align.CENTER)
@@ -275,6 +281,11 @@ class Toolbar(Gtk.ScrolledWindow):
         )
         for btn in all_btns:
             self._refresh_button_child(btn, style, icon_size)
+            ctx = btn.get_style_context()
+            if style == TOOLBAR_STYLE_ICONS_FLAT:
+                ctx.add_class('flat')
+            else:
+                ctx.remove_class('flat')
 
 
         self.queue_resize()

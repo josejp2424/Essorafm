@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import configparser
 import datetime as dt
 import os
@@ -8,6 +8,7 @@ import urllib.parse
 
 from core.settings import TRASH_DIR, TRASH_FILES_DIR, TRASH_INFO_DIR
 from core.privilege import is_permission_error, rm_privileged, mv_privileged
+from core.i18n import tr
 
 
 class TrashService:
@@ -47,12 +48,12 @@ class TrashService:
         name = os.path.basename(path)
         info_path = os.path.join(TRASH_INFO_DIR, f'{name}.trashinfo')
         if not os.path.exists(info_path):
-            raise FileNotFoundError('No se encontró la información de restauración')
+            raise FileNotFoundError(tr('trash_no_restore_info'))
         parser = configparser.ConfigParser(interpolation=None)
         parser.read(info_path, encoding='utf-8')
         original = urllib.parse.unquote(parser['Trash Info'].get('Path', ''))
         if not original:
-            raise RuntimeError('No se pudo leer la ruta original')
+            raise RuntimeError(tr('trash_no_original_path'))
         target = self._unique_path(original) if os.path.exists(original) else original
         os.makedirs(os.path.dirname(target), exist_ok=True)
         try:

@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import hashlib
 import os
 import shutil
@@ -18,13 +18,14 @@ IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.tiff', '.tif',
 PDF_EXTS = {'.pdf'}
 TXT_EXTS = {'.txt', '.log', '.md', '.conf', '.cfg', '.ini', '.desktop', '.sh', '.py', '.c', '.h', '.cpp', '.json', '.xml', '.css'}
 EPUB_EXTS = {'.epub'}
+VIDEO_EXTS = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.m4v', '.ogv', '.ts', '.wmv', '.3gp'}
 
 
 class Thumbnailer:
     """Generador de miniaturas Nivel A para EssoraFM.
 
     Nivel A significa: rápido, simple y seguro. No intenta renderizar documentos
-    completos; solo genera una miniatura básica para imágenes, PDF, TXT y ePub.
+    completos; solo genera una miniatura básica para imágenes, PDF, TXT, ePub y video.
     """
 
     def __init__(self, icon_loader, enabled=True):
@@ -45,6 +46,8 @@ class Thumbnailer:
                 pix = self._text_thumb(path, size)
             elif ext in EPUB_EXTS:
                 pix = self._epub_thumb(path, size)
+            elif ext in VIDEO_EXTS:
+                pix = self._video_thumb(path, size)
             else:
                 pix = None
             return pix or self._fallback(gio_file, file_info, size)
@@ -157,6 +160,53 @@ class Thumbnailer:
                 os.unlink(tmpname)
             except Exception:
                 pass
+
+    def _video_thumb(self, path, size):
+        cache = self._cache_path(path, size)
+        pix = self._load_cached(cache, size)
+        if pix:
+            return pix
+
+        ffmpegthumbnailer = shutil.which('ffmpegthumbnailer')
+        ffmpeg = shutil.which('ffmpeg')
+
+        if not ffmpegthumbnailer and not ffmpeg:
+            return None
+
+        with tempfile.TemporaryDirectory(prefix='essorafm-video-') as tmp:
+            out_png = os.path.join(tmp, 'thumb.png')
+
+            if ffmpegthumbnailer:
+                cmd = [
+                    ffmpegthumbnailer,
+                    '-i', path,
+                    '-o', out_png,
+                    '-s', str(size),
+                    '-q', '8',
+                ]
+            else:
+                cmd = [
+                    ffmpeg, '-y',
+                    '-ss', '5',          
+                    '-i', path,
+                    '-vframes', '1',
+                    '-vf', f'scale={size}:{size}:force_original_aspect_ratio=decrease',
+                    out_png,
+                ]
+
+            subprocess.run(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+            )
+
+            if os.path.exists(out_png):
+                pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(out_png, size, size, True)
+                return self._save_pixbuf(pix, cache)
+
+        return None
 
     def _extract_epub_cover(self, path):
         with zipfile.ZipFile(path, 'r') as zf:

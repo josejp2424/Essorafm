@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
 import gi
 
@@ -63,7 +63,6 @@ class FileSystemService:
                 })
         finally:
             enumerator.close(None)
-        # El ordenamiento lo maneja FileView según preferencias del usuario
         return result
 
     def create_folder(self, base_path, name):

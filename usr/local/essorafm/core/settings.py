@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
 
 APP_NAME = 'EssoraFM'
@@ -23,4 +23,4 @@ DEFAULT_LIST_ICON_SIZE = 32
 DEFAULT_SIDEBAR_ICON_SIZE = 32
 DEFAULT_VIEW_MODE = 'icons'
 ABOUT_GREEN = '#77960A'
-VERSION = "1.0"
+VERSION = "0.4.21"

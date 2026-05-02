@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # EssoraFM preview helper
-# Author: josejp2424
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 
 import os
 import tempfile

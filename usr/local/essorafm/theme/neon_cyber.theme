@@ -1,0 +1,65 @@
+[Theme]
+Id = neon_cyber
+Name = Neon Cyber
+Name[es] = Neón Cyber
+Name[ca] = Neó Cíber
+Name[de] = Neon Cyber
+Name[fr] = Néon Cyber
+Name[it] = Neon Cyber
+Name[pt] = Neon Cyber
+Name[hu] = Neon Cyber
+Name[ja] = ネオンサイバー
+Name[ru] = Неоновый Кибер
+Name[zh] = 霓虹赛博
+Name[ar] = نيون سايبر
+Description = Electric blue, cyberpunk look
+Description[es] = Azul eléctrico, estética cyberpunk
+Description[ca] = Blau elèctric, estètica cyberpunk
+Description[de] = Elektrisches Blau, Cyberpunk-Look
+Description[fr] = Bleu électrique, esthétique cyberpunk
+Description[it] = Blu elettrico, estetica cyberpunk
+Description[pt] = Azul elétrico, estética cyberpunk
+Description[hu] = Elektromos kék, cyberpunk megjelenés
+Description[ja] = エレクトリックブルー、サイバーパンク風
+Description[ru] = Электрический синий, киберпанк-стиль
+Description[zh] = 电光蓝,赛博朋克风
+Description[ar] = أزرق كهربائي بطابع سايبر بانك
+Author = josejp2424
+Version = 1.0
+Emoji = ⚡
+
+[CSS]
+Code =
+    window, .essorafm-root { background-color: #050a0f; }
+    headerbar {
+        background-color: #0a1520;
+        border-bottom: 2px solid #00d4ff;
+        color: #e0f7ff;
+    }
+    headerbar button { color: #e0f7ff; }
+    .essorafm-sidebar-box, .essorafm-sidebar,
+    .essorafm-sidebar-tree {
+        background-color: #080f18;
+    }
+    .essorafm-sidebar-tree.view {
+        background-color: #080f18;
+        color: #b0e8ff;
+    }
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #003a4f;
+        color: #00d4ff;
+    }
+    .essorafm-content, .essorafm-toolbar { background-color: #050a0f; }
+    treeview.view { background-color: #060c14; color: #c8e8ff; }
+    .essorafm-tabs { background-color: #050a0f; }
+    .essorafm-tabs tab {
+        background-color: #0a1520;
+        color: #80ccdd;
+        border-radius: 10px 10px 0 0;
+    }
+    .essorafm-tabs tab:hover { background-color: #0d1e2e; color: #00d4ff; }
+    .essorafm-tabs tab:checked {
+        background-color: #003a4f; color: #00d4ff;
+        box-shadow: 0 -2px 0 0 #00d4ff;
+    }

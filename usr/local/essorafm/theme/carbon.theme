@@ -1,0 +1,60 @@
+[Theme]
+Id = carbon
+Name = Carbon
+Name[es] = Carbono
+Name[ca] = Carboni
+Name[de] = Karbon
+Name[fr] = Carbone
+Name[it] = Carbonio
+Name[pt] = Carbono
+Name[hu] = Szén
+Name[ja] = カーボン
+Name[ru] = Карбон
+Name[zh] = 碳黑
+Name[ar] = كربون
+Description = Carbon gray, minimal and professional
+Description[es] = Gris carbono, minimalista y profesional
+Description[ca] = Gris carboni, minimalista i professional
+Description[de] = Karbongrau, minimalistisch und professionell
+Description[fr] = Gris carbone, minimaliste et professionnel
+Description[it] = Grigio carbonio, minimale e professionale
+Description[pt] = Cinza carbono, minimalista e profissional
+Description[hu] = Szénszürke, minimalista és professzionális
+Description[ja] = カーボングレー、ミニマルでプロフェッショナル
+Description[ru] = Угольно-серый, минималистичный и профессиональный
+Description[zh] = 碳灰色,简约专业
+Description[ar] = رمادي كربوني، بسيط واحترافي
+Author = josejp2424
+Version = 1.0
+Emoji = 🖤
+
+[CSS]
+Code =
+    window, .essorafm-root { background-color: #1a1a1a; }
+    headerbar {
+        background-color: #1f1f1f;
+        border-bottom: 2px solid #9ca3af;
+        color: #f3f4f6;
+    }
+    headerbar button { color: #f3f4f6; }
+    .essorafm-sidebar-box, .essorafm-sidebar,
+    .essorafm-sidebar-tree { background-color: #222222; }
+    .essorafm-sidebar-tree.view {
+        background-color: #222222; color: #e5e7eb;
+    }
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #374151; color: #f9fafb;
+    }
+    .essorafm-content, .essorafm-toolbar { background-color: #1a1a1a; }
+    treeview.view { background-color: #1c1c1c; color: #e5e7eb; }
+    .essorafm-tabs { background-color: #1a1a1a; }
+    .essorafm-tabs tab {
+        background-color: #252525; color: #9ca3af;
+        border-radius: 8px 8px 0 0;
+    }
+    .essorafm-tabs tab:hover { background-color: #2d2d2d; color: #e5e7eb; }
+    .essorafm-tabs tab:checked {
+        background-color: #374151; color: #f9fafb;
+        box-shadow: 0 -2px 0 0 #9ca3af;
+    }

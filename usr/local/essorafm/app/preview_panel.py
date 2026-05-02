@@ -1,5 +1,5 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 # -*- coding: utf-8 -*-
 import os
 from pathlib import Path
@@ -117,6 +117,6 @@ class PreviewPanel(Gtk.Box):
         else:
             self._raw_pixbuf = None
             self.text.get_buffer().set_text(
-                data if isinstance(data, str) else 'No se pudo generar la vista previa.')
+                data if isinstance(data, str) else tr('preview_unavailable'))
             self.stack.set_visible_child_name('text')
         return False

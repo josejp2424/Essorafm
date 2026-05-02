@@ -1,154 +1,119 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
-import configparser
-import os
-import shutil
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 
-from core.settings import CONFIG_DIR
+from core.settings import CONFIG_FILE
+from core.settings_manager import SettingsManager, ESSORAFM_MOUNT_ACTION, ESSORAFM_UMOUNT_ACTION
 
-# EssoraFM desktop settings now live here, as requested.
-# Archivo exclusivo para iconos de escritorio — NO compartir con config.ini
-DESKTOP_DRIVES_CONFIG        = os.path.join(CONFIG_DIR, 'desktop_drives.ini')
-# config.ini es de SettingsManager; ya no se usa como compat para evitar duplicados
+DESKTOP_DRIVES_CONFIG = CONFIG_FILE
 DESKTOP_DRIVES_COMPAT_CONFIG = None
 
 
 class DesktopDriveSettings:
-    """EssoraFM desktop/drive icon settings.
+    """Compatibility wrapper for the EssoraFM internal desktop engine.
 
-    Main configuration file:
-        ~/.config/essorafm/settings.ini
-        [Main]
-
-    A compatibility copy is also written to:
-        ~/.config/essorafm/config.ini
-
-    This lets EssoraFM use settings.ini while keeping essora-desktop-drive-icons
-    compatible if the external binary still expects config.ini.
+    Older code used names like Enabled, ShowInternal or IconSize.  This wrapper
+    maps those names to ~/.config/essorafm/config.ini so the rest of EssoraFM can
+    stay stable while desktop-drive-icons is removed completely.
     """
 
     SECTION = 'Main'
-
-    DEFAULTS = {
-        'XPos': '0.010',
-        'YPos': '0.990',
-        'XOffset': '0',
-        'YOffset': '-40',
-        'NLines': '2',
-        'ShowFrame': 'true',
-        'Vertical': 'false',
-        'ReversePack': 'true',
-        'MountAction': "/usr/local/bin/essorafm '$dir'",
-        'UMountAction': "/usr/local/bin/essorafm -D '$dir'",
-        'DrawShadow': 'true',
-        'FontColor': '#ffffffffffff',
-        'ShadowColor': '#000000000000',
-
-        'Enabled': 'true',
-        'UseExternalDriveIcons': 'true',
-        'ShowInternal': 'true',
-        'ShowRemovable': 'true',
-        'ShowNetwork': 'false',
+    EXTRA_DEFAULTS = {
         'ShowLabels': 'true',
         'ShowDesktopFiles': 'true',
-        'IconSize': '48',
         'SpacingX': '112',
-        'SpacingY': '112',
+        'SpacingY': '126',
         'LabelWidth': '12',
-        'OpenCommand': 'essorafm',
+        'OpenCommand': '/usr/local/bin/essorafm',
         'PymenuCommand': '/usr/local/bin/pymenu',
         'Wallpaper': '',
         'WallpaperMode': 'zoom',
         'WallpaperDirectory': '/usr/share/backgrounds',
-        'SortBy': 'name',
     }
+    DEFAULTS = dict(SettingsManager.DEFAULTS, **EXTRA_DEFAULTS)
 
     LEGACY_MAP = {
-        'enabled': 'Enabled',
-        'show_internal': 'ShowInternal',
-        'show_removable': 'ShowRemovable',
-        'show_network': 'ShowNetwork',
-        'show_labels': 'ShowLabels',
-        'show_desktop_files': 'ShowDesktopFiles',
-        'icon_size': 'IconSize',
-        'spacing_x': 'SpacingX',
-        'spacing_y': 'SpacingY',
-        'label_width': 'LabelWidth',
-        'open_command': 'OpenCommand',
-        'pymenu_command': 'PymenuCommand',
-        'wallpaper': 'Wallpaper',
-        'wallpaper_mode': 'WallpaperMode',
-        'wallpaper_directory': 'WallpaperDirectory',
-        'sort_by': 'SortBy',
-        'start_x': 'XOffset',
-        'start_y': 'YOffset',
-        'use_external_drive_icons': 'UseExternalDriveIcons',
-        'UseExternalDriveIcons': 'UseExternalDriveIcons',
-        'desktop_drive_icons': 'UseExternalDriveIcons',
-        'DesktopDriveIcons': 'UseExternalDriveIcons',
-        'desktop_drive_icons_enabled': 'UseExternalDriveIcons',
-        'DesktopDriveIconsEnabled': 'UseExternalDriveIcons',
-        'show_drive_icons': 'UseExternalDriveIcons',
-        'ShowDriveIcons': 'UseExternalDriveIcons',
+        'Enabled': 'desktop_drive_icons',
+        'enabled': 'desktop_drive_icons',
+        'UseExternalDriveIcons': 'desktop_drive_icons',
+        'use_external_drive_icons': 'desktop_drive_icons',
+        'DesktopDriveIcons': 'desktop_drive_icons',
+        'desktop_drive_icons_enabled': 'desktop_drive_icons',
+        'ShowDriveIcons': 'desktop_drive_icons',
+        'show_drive_icons': 'desktop_drive_icons',
+
+        'IconSize': 'desktop_drive_icon_size',
+        'ShowInternal': 'desktop_drive_show_internal',
+        'show_internal': 'desktop_drive_show_internal',
+        'ShowRemovable': 'desktop_drive_show_removable',
+        'show_removable': 'desktop_drive_show_removable',
+        'ShowNetwork': 'desktop_drive_show_network',
+        'show_network': 'desktop_drive_show_network',
+
+        'ShowLabels': 'ShowLabels',
+        'ShowDesktopFiles': 'ShowDesktopFiles',
+        'SpacingX': 'SpacingX',
+        'SpacingY': 'SpacingY',
+        'LabelWidth': 'LabelWidth',
+        'OpenCommand': 'OpenCommand',
+        'PymenuCommand': 'PymenuCommand',
+        'Wallpaper': 'Wallpaper',
+        'WallpaperMode': 'WallpaperMode',
+        'WallpaperDirectory': 'WallpaperDirectory',
+        'XPos': 'XPos',
+        'YPos': 'YPos',
+        'XOffset': 'XOffset',
+        'YOffset': 'YOffset',
+        'NLines': 'NLines',
+        'ShowFrame': 'ShowFrame',
+        'Vertical': 'Vertical',
+        'ReversePack': 'ReversePack',
+        'MountAction': 'MountAction',
+        'UMountAction': 'UMountAction',
+        'DrawShadow': 'DrawShadow',
+        'FontColor': 'FontColor',
+        'ShadowColor': 'ShadowColor',
+    }
+
+    LOCKED_VALUES = {
+        'MountAction': ESSORAFM_MOUNT_ACTION,
+        'UMountAction': ESSORAFM_UMOUNT_ACTION,
     }
 
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.optionxform = str
-        self.data = dict(self.DEFAULTS)
-        self.load()
+        self.manager = SettingsManager()
+        self.data = self.manager.data
 
-    def _read_file(self, path):
-        parser = configparser.ConfigParser()
-        parser.optionxform = str
-        if not os.path.exists(path):
-            return
-        try:
-            parser.read(path, encoding='utf-8')
-        except Exception:
-            return
-        for section in (self.SECTION, 'General', 'DesktopDriveIcons', 'Desktop', 'Settings'):
-            if parser.has_section(section):
-                for key, value in parser[section].items():
-                    canonical = self.LEGACY_MAP.get(key, key)
-                    self.data[canonical] = value
+    def _canonical_key(self, key):
+        return self.LEGACY_MAP.get(key, key)
 
     def load(self):
-        self.data = dict(self.DEFAULTS)
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-
-        if DESKTOP_DRIVES_COMPAT_CONFIG:
-            self._read_file(DESKTOP_DRIVES_COMPAT_CONFIG)
-        self._read_file(DESKTOP_DRIVES_CONFIG)
-
-        if not os.path.exists(DESKTOP_DRIVES_CONFIG):
-            self.save()
+        self.manager.load()
+        self.data = dict(self.EXTRA_DEFAULTS)
+        self.data.update(self.manager.data)
         return self.data
 
     def save(self):
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-        self.config = configparser.ConfigParser()
-        self.config.optionxform = str
-        self.config[self.SECTION] = self.data
-        with open(DESKTOP_DRIVES_CONFIG, 'w', encoding='utf-8') as fh:
-            self.config.write(fh)
-
-        if DESKTOP_DRIVES_COMPAT_CONFIG:
-            try:
-                with open(DESKTOP_DRIVES_COMPAT_CONFIG, 'w', encoding='utf-8') as fh:
-                    self.config.write(fh)
-            except Exception:
-                pass
+        self.manager.save()
+        self.data = dict(self.EXTRA_DEFAULTS)
+        self.data.update(self.manager.data)
 
     def update(self, mapping):
+        normalized = {}
         for key, value in mapping.items():
-            canonical = self.LEGACY_MAP.get(key, key)
-            self.data[canonical] = str(value)
-        self.save()
+            canonical = self._canonical_key(key)
+            if canonical in self.LOCKED_VALUES:
+                normalized[canonical] = self.LOCKED_VALUES[canonical]
+            else:
+                normalized[canonical] = value
+        self.manager.update(normalized)
+        self.data = dict(self.EXTRA_DEFAULTS)
+        self.data.update(self.manager.data)
 
     def get(self, key, fallback=None):
-        canonical = self.LEGACY_MAP.get(key, key)
-        return self.data.get(canonical, fallback)
+        canonical = self._canonical_key(key)
+        if canonical in self.manager.data:
+            return self.manager.get(canonical, fallback)
+        return self.EXTRA_DEFAULTS.get(canonical, fallback)
 
     def get_bool(self, key, fallback=False):
         value = str(self.get(key, fallback)).strip().lower()

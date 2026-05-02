@@ -1,6 +1,7 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
+import subprocess
 import gi
 
 gi.require_version('Gtk', '3.0')
@@ -9,6 +10,7 @@ from gi.repository import Gtk, GdkPixbuf
 from core.copy_engine import CopyEngine
 from core.settings import APP_NAME, ICON_PATH, ABOUT_ICON_PATH
 from core.i18n import tr, LANG
+from services import themes as theme_service
 
 
 class CopyProgressDialog(Gtk.Dialog):
@@ -143,6 +145,27 @@ class PreferencesDialog(Gtk.Dialog):
         self.sidebar_layout_combo.set_active_id(settings_manager.get('sidebar_layout', 'classic'))
         grid1.attach(self.sidebar_layout_combo, 1, 6, 1, 1)
 
+        _tf_label = tr('toolbar_first')
+        _tf_toolbar_first = tr('toolbar_first_option')
+        _tf_pathbar_first = tr('pathbar_first_option')
+        grid1.attach(Gtk.Label(label=_tf_label, xalign=0), 0, 7, 1, 1)
+        self.toolbar_first_combo = Gtk.ComboBoxText()
+        self.toolbar_first_combo.append('true', _tf_toolbar_first)
+        self.toolbar_first_combo.append('false', _tf_pathbar_first)
+        self.toolbar_first_combo.set_active_id(
+            'true' if settings_manager.get_bool('toolbar_first', True) else 'false')
+        grid1.attach(self.toolbar_first_combo, 1, 7, 1, 1)
+
+        _bp_label = tr('bars_position')
+        _bp_top = tr('bars_position_top')
+        _bp_bottom = tr('bars_position_bottom')
+        grid1.attach(Gtk.Label(label=_bp_label, xalign=0), 0, 8, 1, 1)
+        self.bars_position_combo = Gtk.ComboBoxText()
+        self.bars_position_combo.append('top', _bp_top)
+        self.bars_position_combo.append('bottom', _bp_bottom)
+        self.bars_position_combo.set_active_id(settings_manager.get('bars_position', 'top'))
+        grid1.attach(self.bars_position_combo, 1, 8, 1, 1)
+
         stack.add_titled(page_general, 'general', tr('general'))
 
         page_view = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin=6)
@@ -166,7 +189,7 @@ class PreferencesDialog(Gtk.Dialog):
         grid2.attach(self.list_icon_combo, 1, 1, 1, 1)
 
         self.sidebar_icon_combo = Gtk.ComboBoxText()
-        for size in (16, 20, 24, 28, 32):
+        for size in (16, 20, 24, 28, 32, 40, 48):
             self.sidebar_icon_combo.append(str(size), f'{size}x{size}')
         self.sidebar_icon_combo.set_active_id(str(settings_manager.get_int('sidebar_icon_size', 20)))
         grid2.attach(Gtk.Label(label=tr('sidebar_icons'), xalign=0), 0, 2, 1, 1)
@@ -233,7 +256,72 @@ class PreferencesDialog(Gtk.Dialog):
 
         stack.add_titled(page_layout, 'layout', tr('layout'))
 
+        page_themes = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin=6)
+
+        frame_theme = Gtk.Frame(label=tr('themes_app_section'))
+        grid_theme = Gtk.Grid(column_spacing=12, row_spacing=10, margin=12)
+        frame_theme.add(grid_theme)
+        page_themes.pack_start(frame_theme, False, False, 0)
+
+        grid_theme.attach(Gtk.Label(label=tr('themes_theme'), xalign=0), 0, 0, 1, 1)
+        self.theme_combo = Gtk.ComboBoxText()
+        self.theme_combo.append('default',    tr('themes_default'))
+        self.theme_combo.append('gtk_system', tr('themes_gtk_system'))
+        self._theme_descriptions = {
+            'default':    tr('themes_default_desc'),
+            'gtk_system': tr('themes_gtk_system_desc'),
+        }
+        for t in theme_service.list_themes():
+            label = f"{t['emoji']} {t['name']}".strip() if t['emoji'] else t['name']
+            self.theme_combo.append(t['id'], label)
+            self._theme_descriptions[t['id']] = (
+                f"{t['emoji']} {t['description']}".strip()
+                if t['emoji'] else t['description']
+            )
+        self.theme_combo.set_active_id(settings_manager.get('app_theme', 'default'))
+        grid_theme.attach(self.theme_combo, 1, 0, 1, 1)
+
+        frame_preview = Gtk.Frame(label=tr('themes_preview'))
+        preview_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin=12)
+        frame_preview.add(preview_box)
+        page_themes.pack_start(frame_preview, True, True, 0)
+
+        self._theme_preview_label = Gtk.Label(xalign=0)
+        self._theme_preview_label.set_line_wrap(True)
+        preview_box.pack_start(self._theme_preview_label, False, False, 0)
+
+        frame_style = Gtk.Frame(label=tr('themes_style_options'))
+        grid_style = Gtk.Grid(column_spacing=12, row_spacing=8, margin=12)
+        frame_style.add(grid_style)
+        page_themes.pack_start(frame_style, False, False, 0)
+
+        self.rounded_corners = Gtk.CheckButton(label=tr('themes_rounded'))
+        self.rounded_corners.set_active(settings_manager.get_bool('theme_rounded', True))
+        grid_style.attach(self.rounded_corners, 0, 0, 2, 1)
+
+        self.card_style = Gtk.CheckButton(label=tr('themes_card_style'))
+        self.card_style.set_active(settings_manager.get_bool('theme_cards', False))
+        grid_style.attach(self.card_style, 0, 1, 2, 1)
+
+        self.glassmorphism = Gtk.CheckButton(label=tr('themes_glass'))
+        self.glassmorphism.set_active(settings_manager.get_bool('theme_glass', False))
+        grid_style.attach(self.glassmorphism, 0, 2, 2, 1)
+
+        self.theme_combo.connect('changed', self._on_theme_combo_changed)
+        self._update_theme_preview()
+
+        _themes_label = tr('themes_tab')
+        stack.add_titled(page_themes, 'themes', _themes_label)
+
         self.show_all()
+
+    def _on_theme_combo_changed(self, _combo):
+        self._update_theme_preview()
+
+    def _update_theme_preview(self):
+        tid = self.theme_combo.get_active_id() or 'default'
+        text = self._theme_descriptions.get(tid, '')
+        self._theme_preview_label.set_text(text)
 
     def _sync_spins_with_preset(self):
         active = self.window_preset_combo.get_active_id()
@@ -277,24 +365,106 @@ class PreferencesDialog(Gtk.Dialog):
             'window_width': str(int(self.window_width_spin.get_value())),
             'window_height': str(int(self.window_height_spin.get_value())),
             'sidebar_layout': self.sidebar_layout_combo.get_active_id() or 'classic',
+            'toolbar_first': self.toolbar_first_combo.get_active_id() or 'true',
+            'bars_position': self.bars_position_combo.get_active_id() or 'top',
+            'app_theme': self.theme_combo.get_active_id() or 'default',
+            'theme_rounded': str(self.rounded_corners.get_active()).lower(),
+            'theme_cards': str(self.card_style.get_active()).lower(),
+            'theme_glass': str(self.glassmorphism.get_active()).lower(),
         }
 
 
-class AboutDialog(Gtk.AboutDialog):
+class AboutDialog(Gtk.Dialog):
     def __init__(self, parent):
         super().__init__(transient_for=parent, modal=True)
-        self.set_program_name(APP_NAME)
-        self.set_version('0.4.11')
-        self.set_comments(tr('about_comments'))
-        self.set_license_type(Gtk.License.GPL_3_0)
-        self.set_website('https://sourceforge.net/projects/essora/')
-        self.set_website_label('Essora')
-        self.set_authors(['josejp2424 * Nilsonmorales'])
-        self.set_copyright('GPL-3.0')
+        self.set_title(f'About {APP_NAME}')
+        self.set_resizable(False)
+        self.set_default_size(600, -1)
+        self.set_border_width(0)
+
+        css = b"""
+        .about-title   { font-size: 18pt; font-weight: bold; }
+        .about-version { font-size: 12pt; }
+        .about-label   { font-size: 12pt; }
+        .about-link    { font-size: 12pt; }
+        .about-created { font-size: 11pt; font-style: italic; }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            self.get_screen(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_border_width(24)
+        self.get_content_area().add(box)
+
         target = ABOUT_ICON_PATH if os.path.exists(ABOUT_ICON_PATH) else ICON_PATH
         try:
-            pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(target, 128, 128, True)
-            self.set_logo(pix)
-            self.set_icon(pix)
+            pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(target, 64, 64, True)
+            img = Gtk.Image.new_from_pixbuf(pix)
+            img.set_halign(Gtk.Align.CENTER)
+            box.pack_start(img, False, False, 0)
         except Exception:
             pass
+
+        name_lbl = Gtk.Label(label=APP_NAME)
+        name_lbl.get_style_context().add_class('about-title')
+        name_lbl.set_halign(Gtk.Align.CENTER)
+        box.pack_start(name_lbl, False, False, 0)
+
+        ver_lbl = Gtk.Label(label='Version 0.4.20')
+        ver_lbl.get_style_context().add_class('about-version')
+        ver_lbl.set_halign(Gtk.Align.CENTER)
+        box.pack_start(ver_lbl, False, False, 0)
+
+        box.pack_start(Gtk.Separator(), False, False, 4)
+
+        desc = Gtk.Label(label=tr('about_comments'))
+        desc.get_style_context().add_class('about-label')
+        desc.set_line_wrap(True)
+        desc.set_max_width_chars(38)
+        desc.set_justify(Gtk.Justification.CENTER)
+        desc.set_halign(Gtk.Align.CENTER)
+        box.pack_start(desc, False, False, 0)
+
+        created = Gtk.Label(label='Created by')
+        created.get_style_context().add_class('about-created')
+        created.set_halign(Gtk.Align.CENTER)
+        box.pack_start(created, False, False, 0)
+
+        for username, url in [
+            ('josejp2424',    'https://github.com/josejp2424'),
+            ('woofshahenzup', 'https://github.com/woofshahenzup'),
+        ]:
+            btn = Gtk.LinkButton.new_with_label(url, username)
+            btn.get_style_context().add_class('about-link')
+            btn.set_halign(Gtk.Align.CENTER)
+            btn.connect('activate-link', self._open_url)
+            box.pack_start(btn, False, False, 0)
+
+        box.pack_start(Gtk.Separator(), False, False, 4)
+
+        site_btn = Gtk.LinkButton.new_with_label(
+            'https://sourceforge.net/projects/essora/', 'Essora on SourceForge'
+        )
+        site_btn.get_style_context().add_class('about-link')
+        site_btn.set_halign(Gtk.Align.CENTER)
+        site_btn.connect('activate-link', self._open_url)
+        box.pack_start(site_btn, False, False, 0)
+
+        lic = Gtk.Label(label='License: GPL-3.0')
+        lic.get_style_context().add_class('about-created')
+        lic.set_halign(Gtk.Align.CENTER)
+        box.pack_start(lic, False, False, 0)
+
+        self.add_button('Close', Gtk.ResponseType.CLOSE)
+        self.connect('response', lambda d, _r: d.destroy())
+        self.show_all()
+
+    def _open_url(self, btn):
+        try:
+            subprocess.Popen(['xdg-open', btn.get_uri()])
+        except Exception:
+            pass
+        return True

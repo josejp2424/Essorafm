@@ -1,7 +1,8 @@
 # EssoraFM
-# Author: josejp2424 - GPL-3.0
+# Author: josejp2424 and Nilsonmorales - GPL-3.0
 import os
 import subprocess
+import urllib.parse
 import gi
 
 gi.require_version('Gtk', '3.0')
@@ -77,6 +78,7 @@ class FileView(Gtk.Box):
 
         tree_scroll = Gtk.ScrolledWindow()
         tree_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        tree_scroll.get_style_context().add_class('essorafm-fileview-scroll')
         tree_scroll.add(self.tree)
         self.stack.add_named(tree_scroll, 'list')
         self.icon_view = Gtk.IconView.new_with_model(self.store)
@@ -118,6 +120,7 @@ class FileView(Gtk.Box):
         icon_scroll.set_policy(Gtk.PolicyType.ALWAYS, Gtk.PolicyType.AUTOMATIC)
         icon_scroll.set_hexpand(True)
         icon_scroll.set_vexpand(True)
+        icon_scroll.get_style_context().add_class('essorafm-fileview-scroll')
         icon_scroll.add(self.icon_view)
         self.stack.add_named(icon_scroll, 'icons')
 
@@ -127,6 +130,160 @@ class FileView(Gtk.Box):
 
         self.stack.connect('realize', self._on_stack_realize)
         self.icon_view.connect('map', self._on_icon_view_mapped)
+        
+        self._setup_drop_destination()
+
+    
+    def _setup_drop_destination(self):
+        """Configura el FileView para recibir archivos arrastrados."""
+        targets = [
+            Gtk.TargetEntry.new('text/uri-list', 0, 0),
+            Gtk.TargetEntry.new('text/plain', 0, 1),
+        ]
+        
+        actions = Gdk.DragAction.COPY | Gdk.DragAction.MOVE
+        
+        self.drag_dest_set(Gtk.DestDefaults.ALL, targets, actions)
+        self.connect('drag-data-received', self._on_drag_data_received)
+        self.connect('drag-motion', self._on_drag_motion)
+        self.connect('drag-leave', self._on_drag_leave)
+        
+        self.tree.drag_dest_set(Gtk.DestDefaults.ALL, targets, actions)
+        self.tree.connect('drag-data-received', self._on_drag_data_received)
+        self.tree.connect('drag-motion', self._on_drag_motion)
+        
+        self.icon_view.drag_dest_set(Gtk.DestDefaults.ALL, targets, actions)
+        self.icon_view.connect('drag-data-received', self._on_drag_data_received)
+        self.icon_view.connect('drag-motion', self._on_drag_motion)
+
+    def _on_drag_motion(self, widget, drag_context, x, y, time):
+        """Resalta el widget cuando se arrastra algo sobre él."""
+        Gdk.drag_status(drag_context, Gdk.DragAction.COPY, time)
+        return True
+
+    def _on_drag_leave(self, widget, drag_context, time):
+        """Restaura el widget cuando el cursor sale."""
+        pass
+
+    def _on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
+        """Recibe archivos arrastrados y los copia/mueve a la carpeta actual."""
+        uris = data.get_uris()
+        if not uris:
+            Gtk.drag_finish(drag_context, False, False, time)
+            return
+        
+        paths = []
+        for uri in uris:
+            if uri.startswith('file://'):
+                path = uri[7:]
+                path = urllib.parse.unquote(path)
+                if os.path.exists(path):
+                    paths.append(path)
+        
+        if not paths:
+            Gtk.drag_finish(drag_context, False, False, time)
+            return
+        
+        dlg = CopyProgressDialog(self.get_toplevel(), paths, self.current_path, 
+                                 lambda ok, err: self._after_drag_drop(ok, err, drag_context, time))
+        dlg.present()
+
+    def _after_drag_drop(self, ok, error_text, drag_context, time):
+        """Callback después de completar la copia/movimiento."""
+        if ok:
+            self.refresh()
+            self.show_message(tr('copy_done'))
+            Gtk.drag_finish(drag_context, True, False, time)
+        else:
+            self.show_message(error_text or tr('copy_fail'))
+            Gtk.drag_finish(drag_context, False, False, time)
+
+    def format_size(self, size_bytes):
+        """Formatea el tamaño en bytes a una unidad legible."""
+        if size_bytes == 0:
+            return "0 B"
+        elif size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+    def get_folder_stats(self):
+        """Obtiene estadísticas de la carpeta actual."""
+        try:
+            items = list(self.fs.list_directory(self.current_path, show_hidden=self.show_hidden))
+            total_items = len(items)
+            folders = sum(1 for i in items if i.get('is_dir', False))
+            files = total_items - folders
+            total_size_bytes = 0
+            for item in items:
+                if not item.get('is_dir', False):
+                    total_size_bytes += item.get('size_bytes', 0)
+            return {
+                'total': total_items,
+                'folders': folders,
+                'files': files,
+                'size': self.format_size(total_size_bytes),
+                'size_bytes': total_size_bytes
+            }
+        except Exception:
+            return {'total': 0, 'folders': 0, 'files': 0, 'size': '0 B', 'size_bytes': 0}
+
+    def update_status(self):
+        """Actualiza la barra de estado con informacion de la carpeta o seleccion."""
+        def _do_update():
+            try:
+                selected = self.selected_paths()
+
+                if selected:
+                    total = len(selected)
+                    folders = sum(1 for p in selected if os.path.isdir(p))
+                    files = total - folders
+
+                    size_bytes = 0
+                    for p in selected:
+                        if os.path.isfile(p):
+                            try:
+                                size_bytes += os.path.getsize(p)
+                            except Exception:
+                                pass
+
+                    size = self.format_size(size_bytes)
+
+                    if total == 1:
+                        name = os.path.basename(selected[0])
+                        if folders == 1:
+                            msg = f"\U0001f4c1 {name}"
+                        else:
+                            msg = f"\U0001f4c4 {name} \u2022 {size}"
+                    else:
+                        if files == 0:
+                            msg = f"\U0001f4c1 {total} {tr('folders')}"
+                        elif folders == 0:
+                            msg = f"\U0001f4c4 {total} {tr('files')} \u2022 {size}"
+                        else:
+                            msg = f"\U0001f4c4 {files} {tr('files')} \u2022 \U0001f4c1 {folders} {tr('folders')}"
+                else:
+                    stats = self.get_folder_stats()
+                    if stats['total'] == 0:
+                        msg = tr('empty_folder')
+                    else:
+                        if stats['files'] == 0:
+                            msg = f"\U0001f4c1 {stats['total']} {tr('folders')}"
+                        elif stats['folders'] == 0:
+                            msg = f"\U0001f4c4 {stats['total']} {tr('files')} \u2022 {stats['size']}"
+                        else:
+                            msg = f"\U0001f4c1 {stats['folders']} {tr('folders')} \u2022 \U0001f4c4 {stats['files']} {tr('files')} \u2022 {stats['size']}"
+
+                self.show_message(msg, is_status=True)
+            except Exception as e:
+                print(f"Error updating status: {e}")
+            return False
+
+        GLib.idle_add(_do_update)
 
     def _on_stack_realize(self, widget):
         """Se llama justo después de show_all(). Aplica el modo de vista guardado
@@ -262,12 +419,10 @@ class FileView(Gtk.Box):
         self.show_hidden = self.settings_manager.get_bool('show_hidden', False)
         self.single_click = self.settings_manager.get_bool('single_click', False)
         
-
         self._apply_icon_size_only()
         
         self.refresh()
         
-
         GLib.idle_add(self._fix_icon_view_orientation)
 
     def active_widget(self):
@@ -323,7 +478,11 @@ class FileView(Gtk.Box):
             for item in items:
                 pix = self.thumbnailer.thumbnail_for(item['path'], item['gio_file'], item['file_info'], size)
                 self.store.append([pix, item['name'], item['size_text'], item['modified_text'], item['path'], item['is_dir']])
-            self.on_path_changed(path)
+            try:
+                self.on_path_changed(path)
+            except TypeError:
+                self.on_path_changed(path, False)
+            self.update_status()
         except Exception as exc:
             self.show_message(str(exc))
 
@@ -372,6 +531,7 @@ class FileView(Gtk.Box):
         selected = self.selected_paths()
         if selected:
             self._preview_path(selected[0])
+        self.update_status()
 
     def _schedule_hover_preview(self, path):
         if not path or os.path.isdir(path):
@@ -423,7 +583,6 @@ class FileView(Gtk.Box):
 
     def refresh(self):
         self.load_path(self.current_path, add_to_history=False)
-
         if self._view_mode == 'icons':
             GLib.idle_add(self._fix_icon_view_orientation)
 
