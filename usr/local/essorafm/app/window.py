@@ -95,6 +95,7 @@ class MainWindow(Gtk.ApplicationWindow):
                                on_view_mode=self._on_view_mode_changed,
                                on_sort=self._on_sort_changed,
                                on_split_view=self._on_split_view_toggled,
+                               on_find_files=self.open_find_files,
                                settings_manager=self.settings_manager)
         self.pathbar = PathBar(self.open_path, on_search_changed=self._on_search_changed)
 
@@ -734,6 +735,16 @@ class MainWindow(Gtk.ApplicationWindow):
             view.open_duplicate_scanner()
             self.update_pathbar()
 
+    def open_find_files(self, *_args):
+        """Abre el diálogo de búsqueda de archivos. Si hay una vista activa,
+        usa su carpeta actual como punto de partida; si no, usa $HOME."""
+        from app.find_files import FindFilesDialog
+        view = self.current_view()
+        initial = []
+        if view and getattr(view, 'current_path', None):
+            initial.append(view.current_path)
+        FindFilesDialog(self, initial_dirs=initial or None)
+
     def show_message(self, text, is_status=False):
         """Muestra un mensaje en la barra de estado.
 
@@ -873,6 +884,9 @@ class MainWindow(Gtk.ApplicationWindow):
             return True
         if ctrl and event.keyval == Gdk.KEY_comma:
             self.show_preferences()
+            return True
+        if ctrl and event.keyval == Gdk.KEY_f:
+            self.open_find_files()
             return True
         if event.keyval == Gdk.KEY_Tab and ctrl:
             if self._split_active:

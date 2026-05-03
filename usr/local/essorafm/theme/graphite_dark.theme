@@ -1,0 +1,218 @@
+[Theme]
+Id = graphite_dark
+Name = Graphite Dark
+Name[es] = Grafito Oscuro
+Name[ca] = Grafit Fosc
+Name[de] = Graphit Dunkel
+Name[fr] = Graphite Sombre
+Name[it] = Grafite Scuro
+Name[pt] = Grafite Escuro
+Name[hu] = Grafit Sötét
+Name[ja] = グラファイト ダーク
+Name[ru] = Тёмный графит
+Name[zh] = 石墨深色
+Name[ar] = جرافيت داكن
+Description = Monochrome dark theme inspired by Materia/Graphite — pure grayscale with inverted selection
+Description[es] = Tema oscuro monocromático inspirado en Materia/Graphite — escala de grises pura con selección invertida
+Description[ca] = Tema fosc monocromàtic inspirat en Materia/Graphite — escala de grisos pura amb selecció invertida
+Description[de] = Monochromes dunkles Thema inspiriert von Materia/Graphite — reine Graustufen mit invertierter Auswahl
+Description[fr] = Thème sombre monochrome inspiré de Materia/Graphite — niveaux de gris purs avec sélection inversée
+Description[it] = Tema scuro monocromatico ispirato a Materia/Graphite — scala di grigi pura con selezione invertita
+Description[pt] = Tema escuro monocromático inspirado em Materia/Graphite — escala de cinzas pura com seleção invertida
+Description[hu] = Materia/Graphite ihlette monokróm sötét téma — tiszta szürkeárnyalat fordított kijelöléssel
+Description[ja] = Materia/Graphite にインスパイアされたモノクロのダークテーマ — 反転選択のピュアグレースケール
+Description[ru] = Монохромная тёмная тема в стиле Materia/Graphite — чистая шкала серого с инверсной выделением
+Description[zh] = 受 Materia/Graphite 启发的单色深色主题 — 纯灰度配反色选中
+Description[ar] = سمة داكنة أحادية اللون مستوحاة من Materia/Graphite — تدرج رمادي خالص مع تحديد معكوس
+Author = josejp2424
+Version = 1.0
+Emoji = ⬛
+
+[CSS]
+Code =
+    /* Graphite Dark — monochrome theme inspired by Materia/Graphite GTK
+       Palette (sampled from Graphite-Dark gtkrc):
+         #2C2C2C  base / window background
+         #FFFFFF  text foreground
+         #E0E0E0  selection background (inverted: light)
+         #333333  selection foreground (inverted: dark)
+         #464646  tooltip / elevated surfaces
+         #1f1f1f  sidebar / deeper surfaces
+         #3a3a3a  hover surfaces
+         #8AB4F8  link accent (used very sparingly) */
+
+    window, .essorafm-root {
+        background-color: #2C2C2C;
+        color: #FFFFFF;
+    }
+
+    headerbar {
+        background-color: #1f1f1f;
+        border-bottom: 1px solid #3a3a3a;
+        color: #FFFFFF;
+    }
+    headerbar button { color: #FFFFFF; }
+    headerbar button:hover { background-color: #3a3a3a; }
+
+    .essorafm-sidebar-box,
+    .essorafm-sidebar,
+    .essorafm-sidebar-tree {
+        background-color: #1f1f1f;
+    }
+    .essorafm-sidebar-tree.view {
+        background-color: #1f1f1f;
+        color: #d8d8d8;
+    }
+    .essorafm-sidebar-tree.view:hover {
+        background-color: #2a2a2a;
+        color: #FFFFFF;
+    }
+    /* Selección invertida: fondo claro, texto oscuro — sello distintivo
+       de la línea Graphite/Materia */
+    .essorafm-sidebar-tree.view:selected,
+    .essorafm-sidebar-tree.view:selected:focus {
+        background-color: #E0E0E0;
+        color: #333333;
+    }
+
+    .essorafm-content,
+    .essorafm-toolbar {
+        background-color: #2C2C2C;
+    }
+
+    treeview.view {
+        background-color: #2C2C2C;
+        color: #FFFFFF;
+    }
+    treeview.view:hover {
+        background-color: #3a3a3a;
+    }
+    treeview.view:selected,
+    treeview.view:selected:focus {
+        background-color: #E0E0E0;
+        color: #333333;
+    }
+
+    .essorafm-tabs { background-color: #2C2C2C; }
+    .essorafm-tabs tab {
+        background-color: #1f1f1f;
+        color: #d8d8d8;
+        border-radius: 8px 8px 0 0;
+    }
+    .essorafm-tabs tab:hover {
+        background-color: #3a3a3a;
+        color: #FFFFFF;
+    }
+    .essorafm-tabs tab:checked {
+        background-color: #2C2C2C;
+        color: #FFFFFF;
+        box-shadow: 0 -2px 0 0 #E0E0E0;
+    }
+
+    .essorafm-toolbutton:hover {
+        background-color: #3a3a3a;
+    }
+
+    entry {
+        background-color: #1f1f1f;
+        color: #FFFFFF;
+        border: 1px solid #3a3a3a;
+        border-radius: 4px;
+    }
+    entry:focus {
+        border-color: #E0E0E0;
+    }
+    entry selection {
+        background-color: #E0E0E0;
+        color: #333333;
+    }
+
+    button {
+        background-color: #3a3a3a;
+        color: #FFFFFF;
+        border: 1px solid #464646;
+        border-radius: 4px;
+    }
+    button:hover {
+        background-color: #464646;
+        border-color: #565656;
+    }
+    button:active,
+    button:checked {
+        background-color: #E0E0E0;
+        color: #333333;
+        border-color: #E0E0E0;
+    }
+
+    /* Suggested action: el único lugar donde aparece un toque de color
+       (azul link de Graphite). Mantenido sutil para no romper el monocromo. */
+    button.suggested-action {
+        background-color: #E0E0E0;
+        color: #333333;
+        border-color: #E0E0E0;
+    }
+    button.suggested-action:hover {
+        background-color: #FFFFFF;
+        color: #333333;
+    }
+
+    /* Destructive action: rojo apagado, igual que Graphite */
+    button.destructive-action {
+        background-color: #5a3a3a;
+        color: #FFFFFF;
+        border-color: #6a4a4a;
+    }
+    button.destructive-action:hover {
+        background-color: #6a4a4a;
+    }
+
+    /* Tooltips: ligeramente más claros que el fondo, como en Graphite */
+    tooltip {
+        background-color: #464646;
+        color: #FFFFFF;
+        border: 1px solid #565656;
+    }
+
+    /* Menus */
+    menu, .menu, popover, popover.background {
+        background-color: #2C2C2C;
+        color: #FFFFFF;
+        border: 1px solid #3a3a3a;
+    }
+    menuitem:hover, .menuitem:hover {
+        background-color: #E0E0E0;
+        color: #333333;
+    }
+
+    /* Scrollbars */
+    scrollbar {
+        background-color: #2C2C2C;
+    }
+    scrollbar slider {
+        background-color: #565656;
+        border-radius: 8px;
+        min-width: 8px;
+        min-height: 8px;
+    }
+    scrollbar slider:hover {
+        background-color: #6a6a6a;
+    }
+
+    /* Statusbar */
+    statusbar {
+        background-color: #1f1f1f;
+        color: #d8d8d8;
+        border-top: 1px solid #3a3a3a;
+    }
+
+    /* Path bar / search */
+    .essorafm-pathbar {
+        background-color: #1f1f1f;
+        color: #FFFFFF;
+        border: 1px solid #3a3a3a;
+    }
+
+    /* Separators */
+    separator {
+        background-color: #3a3a3a;
+    }

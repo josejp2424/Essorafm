@@ -1006,6 +1006,7 @@ class EssoraDesktop(Gtk.Window):
         self.step_x = max(self.spacing_x, self.cell_w + 8)
         self.step_y = max(self.spacing_y, self.cell_h + 8)
         self.icon_loader = IconLoader(self.icon_size)
+
         self.sort_mode = self.desktop_settings.get('SortMode', 'name')
         self.sort_reverse = self.desktop_settings.get_bool('SortReverse', False)
         self.auto_arrange = self.desktop_settings.get_bool('AutoArrange', False)
@@ -1629,6 +1630,26 @@ class EssoraDesktop(Gtk.Window):
         layout_item = Gtk.MenuItem(label=tr('desktop_icon_layout'))
         layout_item.connect('activate', lambda *_: self._show_layout_dialog())
         menu.append(layout_item)
+
+        # Submenú "Posición de los discos" — 4 esquinas (Nilson)
+        pos_menu_item = Gtk.MenuItem(label=tr('desktop_drive_position'))
+        pos_submenu = Gtk.Menu()
+        _CORNERS = [
+            (tr('desktop_drive_pos_top_left'),     0.0, 0.0),
+            (tr('desktop_drive_pos_top_right'),    1.0, 0.0),
+            (tr('desktop_drive_pos_bottom_left'),  0.0, 1.0),
+            (tr('desktop_drive_pos_bottom_right'), 1.0, 1.0),
+        ]
+        for label, xp, yp in _CORNERS:
+            is_current = (abs(self.xpos - xp) < 0.1 and abs(self.ypos - yp) < 0.1)
+            c_item = Gtk.CheckMenuItem(label=label)
+            c_item.set_draw_as_radio(True)
+            c_item.set_active(is_current)
+            c_item.connect('activate', lambda w, _xp=xp, _yp=yp: self._set_drive_corner(_xp, _yp))
+            pos_submenu.append(c_item)
+        pos_menu_item.set_submenu(pos_submenu)
+        menu.append(pos_menu_item)
+
         menu.append(Gtk.SeparatorMenuItem())
 
         sort_menu = Gtk.MenuItem(label=tr('desktop_sort_by'))
@@ -1646,11 +1667,13 @@ class EssoraDesktop(Gtk.Window):
         sort_menu.set_submenu(submenu)
         menu.append(sort_menu)
 
+        # Orden inverso (descendente)
         reverse_item = Gtk.CheckMenuItem(label=tr('desktop_sort_reverse'))
         reverse_item.set_active(self.sort_reverse)
         reverse_item.connect('toggled', self._toggle_sort_reverse)
         menu.append(reverse_item)
 
+        # Auto organizar
         auto_item = Gtk.CheckMenuItem(label=tr('desktop_auto_arrange'))
         auto_item.set_active(self.auto_arrange)
         auto_item.connect('toggled', self._toggle_auto_arrange)
@@ -1908,6 +1931,20 @@ class EssoraDesktop(Gtk.Window):
         with open(dest_path, 'w', encoding='utf-8') as fh:
             fh.write('\n'.join(lines))
 
+    def _set_drive_corner(self, xpos, ypos, vertical=None):
+        """Cambia la esquina de anclaje donde se colocan los iconos de discos.
+
+        xpos: 0.0 = izquierda, 1.0 = derecha
+        ypos: 0.0 = arriba,    1.0 = abajo
+        vertical: True para apilar verticalmente, False para fila horizontal,
+                  None para conservar el ajuste actual de Vertical.
+        """
+        data = {'XPos': str(xpos), 'YPos': str(ypos)}
+        if vertical is not None:
+            data['Vertical'] = str(vertical).lower()
+        self.desktop_settings.update(data)
+        self.refresh()
+
     def popup_menu_for_item(self, item, event):
         menu = Gtk.Menu()
         if item.get('path'):
@@ -1927,6 +1964,28 @@ class EssoraDesktop(Gtk.Window):
                 eject_item = Gtk.MenuItem(label=tr('eject'))
                 eject_item.connect('activate', lambda *_: self.volume_service.eject_volume(item['volume'], self._after_eject))
                 menu.append(eject_item)
+        menu.append(Gtk.SeparatorMenuItem())
+
+        # Submenú "Posición de los discos" también accesible desde click
+        # derecho sobre una partición individual (Nilson).
+        pos_menu_item = Gtk.MenuItem(label=tr('desktop_drive_position'))
+        pos_submenu = Gtk.Menu()
+        _CORNERS = [
+            (tr('desktop_drive_pos_top_left'),     0.0, 0.0),
+            (tr('desktop_drive_pos_top_right'),    1.0, 0.0),
+            (tr('desktop_drive_pos_bottom_left'),  0.0, 1.0),
+            (tr('desktop_drive_pos_bottom_right'), 1.0, 1.0),
+        ]
+        for label, xp, yp in _CORNERS:
+            is_current = (abs(self.xpos - xp) < 0.1 and abs(self.ypos - yp) < 0.1)
+            c_item = Gtk.CheckMenuItem(label=label)
+            c_item.set_draw_as_radio(True)
+            c_item.set_active(is_current)
+            c_item.connect('activate', lambda w, _xp=xp, _yp=yp: self._set_drive_corner(_xp, _yp))
+            pos_submenu.append(c_item)
+        pos_menu_item.set_submenu(pos_submenu)
+        menu.append(pos_menu_item)
+
         menu.append(Gtk.SeparatorMenuItem())
         refresh_item = Gtk.MenuItem(label=tr('refresh'))
         refresh_item.connect('activate', lambda *_: self.refresh())

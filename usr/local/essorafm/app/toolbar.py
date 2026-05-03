@@ -31,7 +31,7 @@ class Toolbar(Gtk.ScrolledWindow):
     def __init__(self, on_back, on_up, on_refresh, on_new_tab, on_new_folder,
                  on_toggle_hidden, on_preferences=None, on_duplicates=None,
                  on_view_mode=None, on_sort=None, settings_manager=None,
-                 on_split_view=None):
+                 on_split_view=None, on_find_files=None):
         super().__init__()
         self.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.set_shadow_type(Gtk.ShadowType.NONE)
@@ -63,6 +63,7 @@ class Toolbar(Gtk.ScrolledWindow):
             ('view-refresh-symbolic',  tr('refresh'),          on_refresh),
             ('tab-new-symbolic',       tr('new_tab_short'),    on_new_tab),
             ('folder-new-symbolic',    tr('new_folder_short'), on_new_folder),
+            ('system-search-symbolic', tr('find_files_short'), on_find_files),
             ('edit-find-symbolic',     tr('duplicates_short'), on_duplicates),
         ]
         self._nav_buttons = []

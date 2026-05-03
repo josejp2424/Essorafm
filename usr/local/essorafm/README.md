@@ -7,7 +7,7 @@
 **Modular GTK3 file manager for Essora Linux**
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.22-green.svg)](https://github.com/josejp2424/essorafm/releases)
+[![Version](https://img.shields.io/badge/version-0.4.23-green.svg)](https://github.com/josejp2424/essorafm/releases)
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)]()
 [![Built with](https://img.shields.io/badge/built%20with-Python%203%20%2B%20GTK3-yellow.svg)]()
 [![Init: OpenRC](https://img.shields.io/badge/init-OpenRC%20friendly-orange.svg)]()
@@ -205,7 +205,7 @@ EssoraFM has **no systemd dependency**, so it runs equally well on systemd, Open
 Download the latest release from [Releases](https://github.com/josejp2424/essorafm/releases) or [SourceForge](https://sourceforge.net/projects/essora/) and install:
 
 ```bash
-sudo dpkg -i essorafm_0.4.22-1_amd64.deb
+sudo dpkg -i essorafm_0.4.23-2_amd64.deb
 sudo apt-get install -f   # resolve dependencies if needed
 ```
 
@@ -215,7 +215,7 @@ The `postinst` script seeds default config files into every real user's `~/.conf
 
 ```bash
 tar -xzf essorafm-0_4_21-3_amd64_tar.gz
-cd essorafm-0.4.22-1_amd64
+cd essorafm-0.4.23-2_amd64
 sudo cp -rv usr/* /usr/
 
 # Clean any old bytecode cache (important when upgrading)
@@ -519,13 +519,13 @@ To rebuild the `.deb` package:
 
 ```bash
 # from the project root, where DEBIAN/control sits
-fakeroot dpkg-deb --build --root-owner-group essorafm-0.4.22-1_amd64
+fakeroot dpkg-deb --build --root-owner-group essorafm-0.4.23-2_amd64
 ```
 
 To create a portable tarball:
 
 ```bash
-tar -czf essorafm-0_4_21-3_amd64_tar.gz essorafm-0.4.22-1_amd64/
+tar -czf essorafm-0_4_21-3_amd64_tar.gz essorafm-0.4.23-2_amd64/
 ```
 
 There is no compilation step — EssoraFM is pure Python.
