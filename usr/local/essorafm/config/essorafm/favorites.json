@@ -1,0 +1,10 @@
+{
+  "favorites": [
+    {
+      "id": "fav_home",
+      "name": "Inicio",
+      "path": "/home/essora",
+      "icon": "user-home"
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 Package: essorafm
 Maintainer: josejp2424 <puppylinuxjosejp2424@gmail.com>
 Architecture: amd64
-Version: 0.4.21-3
-Installed-Size: 5399
+Version: 0.4.22-1
+Installed-Size: 5457
 Depends: python3, python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, gir1.2-gdkpixbuf-2.0, gir1.2-glib-2.0, gir1.2-pango-1.0, poppler-utils, samba, udisks2, rclone
 Recommends: git, openssh-client
 Provides: file-manager, system, Utility
 Section: utils
 Priority: optional
 Homepage: https://sourceforge.net/projects/essora/
-Description: EssoraFM 0.4.21-3 file manager - wallpaper carousel now lists SVG images alongside JPG/PNG/WEBP/BMP/TIFF; failed thumbnails are cached to avoid retry loops.||
+Description: EssoraFM 0.4.22-1 file manager - desktop icons (apps, folders, partitions) now open with a single click by default. Setting can be toggled in the desktop right-click configuration.|

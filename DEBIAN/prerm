@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+# Keep system clean if an older external autostart was created manually.
+rm -f /etc/xdg/autostart/essorafm_desktop_drive_icons.desktop
+exit 0

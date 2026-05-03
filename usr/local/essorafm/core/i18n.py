@@ -919,6 +919,124 @@ for _code, _strings in HARDCODED_FIX_STRINGS.items():
 
 
 
+# === Desktop sort/arrange menu (Windows-style right-click on the desktop) ===
+DESKTOP_SORT_STRINGS = {
+    'en': {
+        'desktop_sort_by': 'Sort by',
+        'desktop_sort_name': 'Name',
+        'desktop_sort_size': 'Size',
+        'desktop_sort_date': 'Date modified',
+        'desktop_sort_type': 'Type',
+        'desktop_sort_reverse': 'Descending order',
+        'desktop_auto_arrange': 'Auto arrange',
+    },
+    'es': {
+        'desktop_sort_by': 'Ordenar por',
+        'desktop_sort_name': 'Nombre',
+        'desktop_sort_size': 'Tamaño',
+        'desktop_sort_date': 'Fecha de modificación',
+        'desktop_sort_type': 'Tipo',
+        'desktop_sort_reverse': 'Orden descendente',
+        'desktop_auto_arrange': 'Organizar automáticamente',
+    },
+    'ca': {
+        'desktop_sort_by': 'Ordena per',
+        'desktop_sort_name': 'Nom',
+        'desktop_sort_size': 'Mida',
+        'desktop_sort_date': 'Data de modificació',
+        'desktop_sort_type': 'Tipus',
+        'desktop_sort_reverse': 'Ordre descendent',
+        'desktop_auto_arrange': 'Organitza automàticament',
+    },
+    'de': {
+        'desktop_sort_by': 'Sortieren nach',
+        'desktop_sort_name': 'Name',
+        'desktop_sort_size': 'Größe',
+        'desktop_sort_date': 'Änderungsdatum',
+        'desktop_sort_type': 'Typ',
+        'desktop_sort_reverse': 'Absteigende Reihenfolge',
+        'desktop_auto_arrange': 'Automatisch anordnen',
+    },
+    'fr': {
+        'desktop_sort_by': 'Trier par',
+        'desktop_sort_name': 'Nom',
+        'desktop_sort_size': 'Taille',
+        'desktop_sort_date': 'Date de modification',
+        'desktop_sort_type': 'Type',
+        'desktop_sort_reverse': 'Ordre décroissant',
+        'desktop_auto_arrange': 'Organisation automatique',
+    },
+    'it': {
+        'desktop_sort_by': 'Ordina per',
+        'desktop_sort_name': 'Nome',
+        'desktop_sort_size': 'Dimensione',
+        'desktop_sort_date': 'Data di modifica',
+        'desktop_sort_type': 'Tipo',
+        'desktop_sort_reverse': 'Ordine decrescente',
+        'desktop_auto_arrange': 'Disponi automaticamente',
+    },
+    'pt': {
+        'desktop_sort_by': 'Ordenar por',
+        'desktop_sort_name': 'Nome',
+        'desktop_sort_size': 'Tamanho',
+        'desktop_sort_date': 'Data de modificação',
+        'desktop_sort_type': 'Tipo',
+        'desktop_sort_reverse': 'Ordem decrescente',
+        'desktop_auto_arrange': 'Organizar automaticamente',
+    },
+    'hu': {
+        'desktop_sort_by': 'Rendezés',
+        'desktop_sort_name': 'Név',
+        'desktop_sort_size': 'Méret',
+        'desktop_sort_date': 'Módosítás dátuma',
+        'desktop_sort_type': 'Típus',
+        'desktop_sort_reverse': 'Csökkenő sorrend',
+        'desktop_auto_arrange': 'Automatikus elrendezés',
+    },
+    'ja': {
+        'desktop_sort_by': '並べ替え',
+        'desktop_sort_name': '名前',
+        'desktop_sort_size': 'サイズ',
+        'desktop_sort_date': '更新日時',
+        'desktop_sort_type': '種類',
+        'desktop_sort_reverse': '降順',
+        'desktop_auto_arrange': '自動整列',
+    },
+    'ru': {
+        'desktop_sort_by': 'Сортировать по',
+        'desktop_sort_name': 'Имени',
+        'desktop_sort_size': 'Размеру',
+        'desktop_sort_date': 'Дате изменения',
+        'desktop_sort_type': 'Типу',
+        'desktop_sort_reverse': 'По убыванию',
+        'desktop_auto_arrange': 'Упорядочить автоматически',
+    },
+    'zh': {
+        'desktop_sort_by': '排序方式',
+        'desktop_sort_name': '名称',
+        'desktop_sort_size': '大小',
+        'desktop_sort_date': '修改日期',
+        'desktop_sort_type': '类型',
+        'desktop_sort_reverse': '降序',
+        'desktop_auto_arrange': '自动排列',
+    },
+    'ar': {
+        'desktop_sort_by': 'الترتيب حسب',
+        'desktop_sort_name': 'الاسم',
+        'desktop_sort_size': 'الحجم',
+        'desktop_sort_date': 'تاريخ التعديل',
+        'desktop_sort_type': 'النوع',
+        'desktop_sort_reverse': 'ترتيب تنازلي',
+        'desktop_auto_arrange': 'ترتيب تلقائي',
+    },
+}
+
+for _code, _strings in DESKTOP_SORT_STRINGS.items():
+    if _code in STRINGS:
+        STRINGS[_code].update(_strings)
+
+
+
 def tr(key: str) -> str:
     if key in STRINGS.get(LANG, {}):
         return STRINGS[LANG][key]

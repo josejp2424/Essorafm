@@ -50,6 +50,14 @@ def _save_icon_positions(positions):
         pass
 
 
+def _clear_icon_positions():
+    try:
+        if os.path.exists(_ICON_POSITIONS_FILE):
+            os.remove(_ICON_POSITIONS_FILE)
+    except Exception:
+        pass
+
+
 class DesktopDriveIcon(Gtk.EventBox):
     def __init__(self, item, desktop):
         super().__init__()
@@ -420,6 +428,8 @@ class DesktopFileIcon(Gtk.EventBox):
         return False
 
     def _on_motion(self, _widget, event):
+        if getattr(self.desktop, 'auto_arrange', False):
+            return False
         if not (event.state & Gdk.ModifierType.BUTTON1_MASK):
             return False
         dx = event.x_root - self._drag_ptr_x
@@ -438,7 +448,7 @@ class DesktopFileIcon(Gtk.EventBox):
         return True
 
     def _on_button_release(self, _widget, event):
-        if event.button == 1 and self._dragging:
+        if event.button == 1 and self._dragging and not getattr(self.desktop, 'auto_arrange', False):
             alloc = self.get_allocation()
             pos = _load_icon_positions()
             pos[os.path.basename(self.path)] = [alloc.x, alloc.y]
@@ -986,7 +996,7 @@ class EssoraDesktop(Gtk.Window):
         self.umount_action = "/usr/local/bin/essorafm -D '$dir'"
         self.open_command = self.desktop_settings.get('OpenCommand', 'essorafm') or 'essorafm'
         self.pymenu_command = self.desktop_settings.get('PymenuCommand', '/usr/local/bin/pymenu') or '/usr/local/bin/pymenu'
-        self.desktop_single_click = self.desktop_settings.get_bool('desktop_single_click', False)
+        self.desktop_single_click = self.desktop_settings.get_bool('desktop_single_click', True)
         self.wallpaper = os.path.expanduser(self.desktop_settings.get('Wallpaper', '') or '')
         self.wallpaper_mode = self.desktop_settings.get('WallpaperMode', 'zoom') or 'zoom'
         self.wallpaper_directory = os.path.expanduser(self.desktop_settings.get('WallpaperDirectory', '/usr/share/backgrounds') or '/usr/share/backgrounds')
@@ -996,6 +1006,9 @@ class EssoraDesktop(Gtk.Window):
         self.step_x = max(self.spacing_x, self.cell_w + 8)
         self.step_y = max(self.spacing_y, self.cell_h + 8)
         self.icon_loader = IconLoader(self.icon_size)
+        self.sort_mode = self.desktop_settings.get('SortMode', 'name')
+        self.sort_reverse = self.desktop_settings.get_bool('SortReverse', False)
+        self.auto_arrange = self.desktop_settings.get_bool('AutoArrange', False)
 
     def _desktop_drive_icons_binary(self):
         return None
@@ -1241,7 +1254,25 @@ class EssoraDesktop(Gtk.Window):
         if not self.show_desktop_files or not os.path.isdir(self.desktop_dir):
             return []
         try:
-            return sorted([os.path.join(self.desktop_dir, n) for n in os.listdir(self.desktop_dir) if not n.startswith('.')], key=lambda p: os.path.basename(p).lower())
+            files = [
+                os.path.join(self.desktop_dir, n)
+                for n in os.listdir(self.desktop_dir)
+                if not n.startswith('.')
+            ]
+
+            def sort_key(path):
+                try:
+                    if self.sort_mode == 'size':
+                        return os.path.getsize(path)
+                    if self.sort_mode == 'date':
+                        return os.path.getmtime(path)
+                    if self.sort_mode == 'type':
+                        return os.path.splitext(path)[1].lower()
+                    return os.path.basename(path).lower()
+                except Exception:
+                    return 0
+
+            return sorted(files, key=sort_key, reverse=self.sort_reverse)
         except Exception:
             return []
 
@@ -1364,7 +1395,10 @@ class EssoraDesktop(Gtk.Window):
                     best_idx = idx
             return best_idx
 
-        saved_pos = _load_icon_positions()
+        if self.auto_arrange:
+            saved_pos = {}
+        else:
+            saved_pos = _load_icon_positions()
         desktop_files = list(self._desktop_files())
 
         occupied_slots = set()
@@ -1416,6 +1450,11 @@ class EssoraDesktop(Gtk.Window):
 
     def open_desktop_file(self, path):
         target = self._resolve_desktop_link(path)
+
+        if os.path.isdir(target):
+            self.open_path(target)
+            return
+
         try:
             app_info = Gio.DesktopAppInfo.new_from_filename(target)
             if app_info is not None:
@@ -1432,8 +1471,8 @@ class EssoraDesktop(Gtk.Window):
                 self._error(str(exc))
 
     def _resolve_desktop_link(self, path):
-        """Si el .desktop es Type=Link y URL apunta a otro .desktop existente,
-        devuelve la ruta del .desktop apuntado. En cualquier otro caso,
+        """Si el .desktop es Type=Link y URL apunta a otro .desktop existente
+        o a una carpeta existente, devuelve esa ruta. En cualquier otro caso,
         devuelve la ruta original."""
         if not path.endswith('.desktop'):
             return path
@@ -1450,8 +1489,10 @@ class EssoraDesktop(Gtk.Window):
                 url = keyfile.get_string('Desktop Entry', 'URL')
             except Exception:
                 return path
-            if url and url.endswith('.desktop') and os.path.isabs(url) and os.path.exists(url):
-                return url
+
+            if url and os.path.isabs(url) and os.path.exists(url):
+                if url.endswith('.desktop') or os.path.isdir(url):
+                    return url
         except Exception:
             pass
         return path
@@ -1555,6 +1596,24 @@ class EssoraDesktop(Gtk.Window):
         self.popup_desktop_menu(None)
         return True
 
+    def _set_sort_mode(self, _widget, mode):
+        self.desktop_settings.update({'SortMode': mode})
+        if self.auto_arrange:
+            _clear_icon_positions()
+        self.refresh()
+
+    def _toggle_sort_reverse(self, _widget):
+        new_val = not self.sort_reverse
+        self.desktop_settings.update({'SortReverse': str(new_val).lower()})
+        self.refresh()
+
+    def _toggle_auto_arrange(self, _widget):
+        new_val = not self.auto_arrange
+        self.desktop_settings.update({'AutoArrange': str(new_val).lower()})
+        if new_val:
+            _clear_icon_positions()
+        self.refresh()
+
     def popup_desktop_menu(self, event=None):
         menu = Gtk.Menu()
         applications = Gtk.MenuItem(label=tr('applications'))
@@ -1570,6 +1629,34 @@ class EssoraDesktop(Gtk.Window):
         layout_item = Gtk.MenuItem(label=tr('desktop_icon_layout'))
         layout_item.connect('activate', lambda *_: self._show_layout_dialog())
         menu.append(layout_item)
+        menu.append(Gtk.SeparatorMenuItem())
+
+        sort_menu = Gtk.MenuItem(label=tr('desktop_sort_by'))
+        submenu = Gtk.Menu()
+        sort_options = [
+            ('name', tr('desktop_sort_name')),
+            ('size', tr('desktop_sort_size')),
+            ('date', tr('desktop_sort_date')),
+            ('type', tr('desktop_sort_type')),
+        ]
+        for mode, label in sort_options:
+            item = Gtk.MenuItem(label=label)
+            item.connect('activate', self._set_sort_mode, mode)
+            submenu.append(item)
+        sort_menu.set_submenu(submenu)
+        menu.append(sort_menu)
+
+        reverse_item = Gtk.CheckMenuItem(label=tr('desktop_sort_reverse'))
+        reverse_item.set_active(self.sort_reverse)
+        reverse_item.connect('toggled', self._toggle_sort_reverse)
+        menu.append(reverse_item)
+
+        auto_item = Gtk.CheckMenuItem(label=tr('desktop_auto_arrange'))
+        auto_item.set_active(self.auto_arrange)
+        auto_item.connect('toggled', self._toggle_auto_arrange)
+        menu.append(auto_item)
+
+        menu.append(Gtk.SeparatorMenuItem())
         refresh_item = Gtk.MenuItem(label=tr('refresh'))
         refresh_item.connect('activate', lambda *_: self.refresh())
         menu.append(refresh_item)
@@ -1986,7 +2073,7 @@ class EssoraDesktop(Gtk.Window):
         grid.attach(click_label, 0, row, 2, 1)
         row += 1
         chk_sc = Gtk.CheckButton(label=tr('desktop_open_single_click'))
-        chk_sc.set_active(self.desktop_settings.get_bool('desktop_single_click', False))
+        chk_sc.set_active(self.desktop_settings.get_bool('desktop_single_click', True))
         chk_sc.set_tooltip_text(tr('desktop_open_single_click'))
         checks['desktop_single_click'] = chk_sc
         grid.attach(chk_sc, 0, row, 2, 1)

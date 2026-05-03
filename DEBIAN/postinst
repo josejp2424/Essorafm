@@ -1,0 +1,45 @@
+#!/bin/sh
+set -e
+
+# Remove old external desktop-drive-icons autostart created by previous builds.
+if [ -f "/etc/xdg/autostart/essorafm_desktop_drive_icons.desktop" ]; then
+    rm -f /etc/xdg/autostart/essorafm_desktop_drive_icons.desktop
+fi
+
+# Seed default EssoraFM config into every real user's ~/.config/essorafm/.
+# Files that already exist in the user's directory are NEVER overwritten,
+# so personal settings are preserved across upgrades. New files added to
+# the template in future package versions are copied in automatically.
+SRC_DIR="/usr/local/essorafm/config/essorafm"
+
+if [ -d "$SRC_DIR" ]; then
+    while IFS=: read -r username _ uid gid _ home shell; do
+        [ "$uid" -ge 1000 ] 2>/dev/null || continue
+        [ "$uid" -lt 65534 ] 2>/dev/null || continue
+        [ -d "$home" ] || continue
+        case "$shell" in
+            */nologin|*/false|"") continue ;;
+        esac
+
+        DEST_DIR="$home/.config/essorafm"
+        mkdir -p "$DEST_DIR"
+        chown "$uid:$gid" "$home/.config" "$DEST_DIR" 2>/dev/null || true
+        find "$SRC_DIR" -mindepth 1 | while read -r src_path; do
+            rel="${src_path#$SRC_DIR/}"
+            dst_path="$DEST_DIR/$rel"
+            if [ -d "$src_path" ]; then
+                if [ ! -d "$dst_path" ]; then
+                    mkdir -p "$dst_path"
+                    chown "$uid:$gid" "$dst_path" 2>/dev/null || true
+                fi
+            else
+                if [ ! -e "$dst_path" ]; then
+                    cp -p "$src_path" "$dst_path"
+                    chown "$uid:$gid" "$dst_path" 2>/dev/null || true
+                fi
+            fi
+        done
+    done < /etc/passwd
+fi
+
+exit 0
