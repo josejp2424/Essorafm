@@ -7,7 +7,7 @@
 **Modular GTK3 file manager for Essora Linux**
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.22-green.svg)](https://github.com/josejp2424/essorafm/releases)
+[![Version](https://img.shields.io/badge/version-0.4.23-green.svg)](https://github.com/josejp2424/essorafm/releases)
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)]()
 [![Built with](https://img.shields.io/badge/built%20with-Python%203%20%2B%20GTK3-yellow.svg)]()
 [![Init: OpenRC](https://img.shields.io/badge/init-OpenRC%20friendly-orange.svg)]()
