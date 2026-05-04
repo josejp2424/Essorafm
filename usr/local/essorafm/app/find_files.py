@@ -36,12 +36,15 @@ from gi.repository import Gtk, Gdk, GLib, Gio, Pango
 from core.i18n import tr
 from core.xdg import xdg_dir, XDG
 
+
+# Tamaños — multiplicadores
 _SIZE_UNITS = {
     'KB': 1024,
     'MB': 1024 * 1024,
     'GB': 1024 * 1024 * 1024,
 }
 
+# Tipos de archivo y sus extensiones / mime prefijo
 _FILE_TYPES = {
     'all':   None,
     'text':  ('text/', ['.txt', '.md', '.log', '.conf', '.ini', '.py', '.sh',
@@ -55,6 +58,7 @@ _FILE_TYPES = {
                          '.m4v', '.ogv', '.ts', '.wmv', '.3gp']),
 }
 
+# Filtros de fecha relativa al "ahora"
 _DATE_LIMITS = {
     'any':       None,
     'today':     1,
@@ -132,6 +136,9 @@ class FindFilesDialog(Gtk.Window):
 
         self.show_all()
 
+    # ------------------------------------------------------------------
+    # UI: criterios
+    # ------------------------------------------------------------------
 
     def _build_criteria_page(self, initial_dirs):
         scroll = Gtk.ScrolledWindow()
@@ -144,6 +151,7 @@ class FindFilesDialog(Gtk.Window):
         outer.set_margin_bottom(12)
         scroll.add(outer)
 
+        # === Patrón de nombre ===
         frame_name = Gtk.Frame(label=tr('find_files_name'))
         nb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         nb.set_margin_start(10); nb.set_margin_end(10)
@@ -161,6 +169,7 @@ class FindFilesDialog(Gtk.Window):
 
         outer.pack_start(frame_name, False, False, 0)
 
+        # === Tipo de archivo ===
         frame_type = Gtk.Frame(label=tr('find_files_type'))
         tb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         tb.set_margin_start(10); tb.set_margin_end(10)
@@ -185,12 +194,14 @@ class FindFilesDialog(Gtk.Window):
 
         outer.pack_start(frame_type, False, False, 0)
 
+        # === Tamaño y fecha ===
         frame_meta = Gtk.Frame(label=tr('find_files_size_date'))
         mg = Gtk.Grid(column_spacing=10, row_spacing=8)
         mg.set_margin_start(10); mg.set_margin_end(10)
         mg.set_margin_top(10);   mg.set_margin_bottom(10)
         frame_meta.add(mg)
 
+        # Tamaño mínimo
         self.size_min_chk = Gtk.CheckButton(label=tr('find_files_size_min'))
         mg.attach(self.size_min_chk, 0, 0, 1, 1)
         self.size_min_spin = Gtk.SpinButton.new_with_range(0, 100000, 1)
@@ -202,6 +213,7 @@ class FindFilesDialog(Gtk.Window):
         self.size_min_unit.set_active_id('KB')
         mg.attach(self.size_min_unit, 2, 0, 1, 1)
 
+        # Tamaño máximo
         self.size_max_chk = Gtk.CheckButton(label=tr('find_files_size_max'))
         mg.attach(self.size_max_chk, 0, 1, 1, 1)
         self.size_max_spin = Gtk.SpinButton.new_with_range(0, 100000, 1)
@@ -227,6 +239,7 @@ class FindFilesDialog(Gtk.Window):
 
         outer.pack_start(frame_meta, False, False, 0)
 
+        # === Lugares (carpetas a buscar) ===
         frame_places = Gtk.Frame(label=tr('find_files_places'))
         pb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         pb.set_margin_start(10); pb.set_margin_end(10)
@@ -288,10 +301,16 @@ class FindFilesDialog(Gtk.Window):
 
         return scroll
 
+    # ------------------------------------------------------------------
+    # UI: resultados
+    # ------------------------------------------------------------------
 
     def _build_results_page(self):
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+
+        # Columnas: icono, nombre, ruta, tamaño, modificado
+        # icon_name (str), name (str), dirname (str), size (str), mtime (str), full_path (str, hidden)
         self.results_store = Gtk.ListStore(str, str, str, str, str, str)
         self.results_view = Gtk.TreeView(model=self.results_store)
         self.results_view.set_rules_hint(True)
@@ -334,9 +353,14 @@ class FindFilesDialog(Gtk.Window):
         scroll.add(self.results_view)
         return scroll
 
+    # ------------------------------------------------------------------
+    # Lugares
+    # ------------------------------------------------------------------
+
     def _add_place(self, path):
         if not path or not os.path.isdir(path):
             return
+        # Evitar duplicados
         for row in self.places_store:
             if row[0] == path:
                 return
@@ -363,8 +387,12 @@ class FindFilesDialog(Gtk.Window):
         if treeiter is not None:
             model.remove(treeiter)
 
+    # ------------------------------------------------------------------
+    # Búsqueda
+    # ------------------------------------------------------------------
 
     def _on_search_clicked(self, _btn):
+        # Si ya hay una búsqueda corriendo, ignorar
         if self._search_thread is not None and self._search_thread.is_alive():
             return
 
@@ -446,6 +474,7 @@ class FindFilesDialog(Gtk.Window):
         pattern = criteria['pattern']
         case_sensitive = criteria['case_sensitive']
 
+        # Compilar el patrón una sola vez
         if pattern:
             if not case_sensitive:
                 pattern_lower = pattern.lower()
@@ -470,6 +499,7 @@ class FindFilesDialog(Gtk.Window):
                     size_min, size_max, date_after, include_sub, include_hidden,
                 )
             except Exception as exc:
+                # Log silently y seguir con la próxima carpeta
                 print(f'find_files: error walking {root_dir}: {exc}')
 
         # Notificar fin
@@ -477,6 +507,7 @@ class FindFilesDialog(Gtk.Window):
 
     def _walk_directory(self, root_dir, pattern, case_sensitive, type_filter,
                         size_min, size_max, date_after, include_sub, include_hidden):
+        # Si include_sub=False, solo iteramos los archivos directos.
         if not include_sub:
             try:
                 entries = os.listdir(root_dir)
@@ -493,10 +524,12 @@ class FindFilesDialog(Gtk.Window):
                                        type_filter, size_min, size_max, date_after)
             return
 
+        # include_sub=True: os.walk con manejo de hidden
         for current, subdirs, files in os.walk(root_dir, followlinks=False):
             if self._cancel_event.is_set():
                 return
 
+            # Filtrar subdirs ocultos in-place para que os.walk no entre
             if not include_hidden:
                 subdirs[:] = [d for d in subdirs if not d.startswith('.')]
 
@@ -511,19 +544,23 @@ class FindFilesDialog(Gtk.Window):
 
     def _test_and_add(self, full_path, name, pattern, case_sensitive,
                       type_filter, size_min, size_max, date_after):
+        # Test patrón de nombre
         if pattern and pattern != '*':
             test_name = name if case_sensitive else name.lower()
             if not fnmatch.fnmatch(test_name, pattern):
                 return
 
+        # Test tipo
         if type_filter is not None:
             mime_prefix, exts = type_filter
             ext = os.path.splitext(name)[1].lower()
             if ext not in exts:
+                # Fallback: chequear MIME
                 mime, _ = mimetypes.guess_type(full_path)
                 if not mime or not mime.startswith(mime_prefix):
                     return
 
+        # Test tamaño y fecha (requieren stat)
         try:
             st = os.stat(full_path)
         except (PermissionError, OSError):
@@ -536,6 +573,7 @@ class FindFilesDialog(Gtk.Window):
         if date_after is not None and st.st_mtime < date_after:
             return
 
+        # Pasó todos los filtros — agregar al UI
         info = {
             'full_path': full_path,
             'name': name,
@@ -546,6 +584,7 @@ class FindFilesDialog(Gtk.Window):
         GLib.idle_add(self._add_result_row, info)
 
     def _add_result_row(self, info):
+        # Determinar icono basado en mime
         mime, _ = mimetypes.guess_type(info['full_path'])
         if mime:
             icon_name = self._mime_to_icon(mime)
@@ -565,6 +604,7 @@ class FindFilesDialog(Gtk.Window):
         ])
         self._results_count += 1
 
+        # Actualizar status cada 50 resultados para no saturar
         if self._results_count % 50 == 0:
             self._set_status(tr('find_files_found_count').format(n=self._results_count))
         return False
@@ -579,6 +619,9 @@ class FindFilesDialog(Gtk.Window):
         self._stop_btn.set_sensitive(False)
         return False
 
+    # ------------------------------------------------------------------
+    # Resultados — abrir
+    # ------------------------------------------------------------------
 
     def _on_result_activated(self, _view, path, _column):
         """Doble-click en un resultado → abre la carpeta contenedora en EssoraFM
@@ -593,6 +636,7 @@ class FindFilesDialog(Gtk.Window):
     def _on_result_button_press(self, view, event):
         if event.button != 3:
             return False
+        # Menú contextual en click derecho
         path_info = view.get_path_at_pos(int(event.x), int(event.y))
         if path_info is None:
             return False
@@ -638,6 +682,7 @@ class FindFilesDialog(Gtk.Window):
                     return
                 except Exception:
                     continue
+        # Fallback: abrir con default
         try:
             Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
         except Exception:
@@ -658,6 +703,9 @@ class FindFilesDialog(Gtk.Window):
         clipboard.set_text(path, -1)
         clipboard.store()
 
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
 
     def _set_status(self, text):
         self._status_label.set_text(text)
@@ -685,6 +733,7 @@ class FindFilesDialog(Gtk.Window):
         return 'text-x-generic'
 
     def _on_key_press(self, _widget, event):
+        # Escape cierra (si no hay búsqueda) o detiene
         if event.keyval == Gdk.KEY_Escape:
             if self._search_thread is not None and self._search_thread.is_alive():
                 self._cancel_event.set()

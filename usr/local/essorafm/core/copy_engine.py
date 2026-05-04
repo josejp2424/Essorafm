@@ -72,54 +72,76 @@ class CopyEngine:
 
     def _copy_privileged(self, sources, destination, progress_cb):
         """Copia con pkexec/gksu cuando el destino requiere privilegios.
-        Muestra progreso por archivo ya que pkexec no da salida de progreso."""
+
+        Importante: invocamos pkexec UNA SOLA VEZ pasándole todos los
+        sources juntos. Antes invocábamos un pkexec por cada source, lo
+        que disparaba el diálogo de contraseña tantas veces como archivos
+        a copiar. `cp` soporta múltiples orígenes de una sola vez:
+            cp -a -- src1 src2 src3 destination
+        """
         escalator = find_escalator()
         if not escalator:
             raise RuntimeError('pkexec / gksu no disponible. Instala policykit-1.')
 
-        total = max(len(sources), 1)
-        for index, src in enumerate(sources, start=1):
-            if self.cancelled:
-                return
-            name = os.path.basename(os.path.normpath(src))
-            fraction_start = (index - 1) / total
-            fraction_end = index / total
+        if not sources:
+            return
 
-            GLib.idle_add(progress_cb,
-                          f'[privilegiado] Copiando {name}... ({index}/{total})',
-                          fraction_start)
+        # Filtrar duplicados manteniendo orden, en caso de que el caller
+        # llame con un único src después de un fallback parcial.
+        seen = set()
+        unique_sources = []
+        for s in sources:
+            if s not in seen:
+                seen.add(s)
+                unique_sources.append(s)
 
-            if escalator.endswith('pkexec'):
-                cmd = [escalator, '/bin/cp', '-a', '--', src, destination]
-            else:
-                safe_src = src.replace("'", "'\\''")
-                safe_dst = destination.replace("'", "'\\''")
-                cmd = [escalator, f"/bin/cp -a -- '{safe_src}' '{safe_dst}'"]
+        total = len(unique_sources)
+        names_preview = ', '.join(os.path.basename(os.path.normpath(s))
+                                  for s in unique_sources[:3])
+        if total > 3:
+            names_preview += f', ... (+{total - 3})'
 
-            try:
-                self.process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                _, stderr = self.process.communicate()
-                rc = self.process.returncode
-                if rc == 126 or rc == 127:
-                    raise RuntimeError('Autenticación cancelada o fallida')
-                if rc != 0:
-                    msg = stderr.decode(errors='replace').strip()
-                    raise RuntimeError(msg or f'cp privilegiado falló (código {rc})')
-            except RuntimeError:
-                raise
-            except Exception as exc:
-                raise RuntimeError(str(exc))
+        GLib.idle_add(progress_cb,
+                      f'[privilegiado] Copiando {names_preview}...',
+                      0.0)
 
-            GLib.idle_add(progress_cb, f'Copiado {name}', fraction_end)
+        if escalator.endswith('pkexec'):
+            cmd = [escalator, '/bin/cp', '-a', '--', *unique_sources, destination]
+        else:
+            # gksu solo acepta un string de comando; armamos una línea
+            # con todos los orígenes escapados con shlex.quote
+            import shlex
+            quoted = ' '.join(shlex.quote(s) for s in unique_sources)
+            quoted_dst = shlex.quote(destination)
+            cmd = [escalator, f'/bin/cp -a -- {quoted} {quoted_dst}']
+
+        try:
+            self.process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            _, stderr = self.process.communicate()
+            rc = self.process.returncode
+            if rc == 126 or rc == 127:
+                raise RuntimeError('Autenticación cancelada o fallida')
+            if rc != 0:
+                msg = stderr.decode(errors='replace').strip()
+                raise RuntimeError(msg or f'cp privilegiado falló (código {rc})')
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            raise RuntimeError(str(exc))
 
         GLib.idle_add(progress_cb, 'Finalizando...', 1.0)
 
     def _copy_with_rsync(self, sources, destination, progress_cb):
         total = max(len(sources), 1)
+        # Acumulamos los archivos que fallaron por permisos para hacer
+        # UN SOLO pkexec con todos ellos al final, en lugar de uno por cada
+        # archivo (que hacía aparecer el diálogo varias veces).
+        failed_for_priv = []
+
         for index, src in enumerate(sources, start=1):
             if self.cancelled:
                 return
@@ -135,7 +157,7 @@ class CopyEngine:
                     text=True, bufsize=1)
             except Exception as exc:
                 if is_permission_error(exc):
-                    self._copy_privileged([src], destination, progress_cb)
+                    failed_for_priv.append(src)
                     continue
                 raise
 
@@ -166,15 +188,24 @@ class CopyEngine:
             code = self.process.wait()
             if code != 0 and not self.cancelled:
                 if code == 23 or code == 11:
-                    self._copy_privileged([src], destination, progress_cb)
+                    failed_for_priv.append(src)
                 else:
                     raise RuntimeError(f'rsync devolvió código {code}')
+
+        # Después del loop, si algo falló por permisos, retry como
+        # privilegiado con UNA sola autenticación.
+        if failed_for_priv and not self.cancelled:
+            self._copy_privileged(failed_for_priv, destination, progress_cb)
 
         GLib.idle_add(progress_cb, 'Finalizando...', 1.0)
 
 
     def _copy_with_python(self, sources, destination, progress_cb):
         total = max(len(sources), 1)
+        # Mismo patrón que rsync: acumular fallos de permisos y un solo
+        # pkexec al final.
+        failed_for_priv = []
+
         for index, src in enumerate(sources, start=1):
             if self.cancelled:
                 return
@@ -195,10 +226,13 @@ class CopyEngine:
                         shutil.copy2(src, target)
             except Exception as exc:
                 if is_permission_error(exc):
-                    self._copy_privileged([src], destination, progress_cb)
+                    failed_for_priv.append(src)
                 else:
                     raise
             GLib.idle_add(progress_cb, f'Copiado {name}', index / total)
+
+        if failed_for_priv and not self.cancelled:
+            self._copy_privileged(failed_for_priv, destination, progress_cb)
 
         GLib.idle_add(progress_cb, 'Fin...', 1.0)
 

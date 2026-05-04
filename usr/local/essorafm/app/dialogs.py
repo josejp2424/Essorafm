@@ -413,7 +413,7 @@ class AboutDialog(Gtk.Dialog):
         name_lbl.set_halign(Gtk.Align.CENTER)
         box.pack_start(name_lbl, False, False, 0)
 
-        ver_lbl = Gtk.Label(label='Version 0.4.23')
+        ver_lbl = Gtk.Label(label='Version 0.4.21')
         ver_lbl.get_style_context().add_class('about-version')
         ver_lbl.set_halign(Gtk.Align.CENTER)
         box.pack_start(ver_lbl, False, False, 0)

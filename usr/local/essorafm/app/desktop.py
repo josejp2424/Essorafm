@@ -427,7 +427,7 @@ class DesktopFileIcon(Gtk.EventBox):
             return True
         return False
 
-    def _on_motion(self, _widget, event):
+    def _on_motion(self, _widget, event)
         if getattr(self.desktop, 'auto_arrange', False):
             return False
         if not (event.state & Gdk.ModifierType.BUTTON1_MASK):
@@ -1134,12 +1134,68 @@ class EssoraDesktop(Gtk.Window):
             commands.append(['xwallpaper', '--zoom', self.wallpaper])
         if shutil.which('nitrogen'):
             commands.append(['nitrogen', '--set-zoom-fill', self.wallpaper])
+
+        applied = False
         for cmd in commands:
             try:
                 subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                return
+                applied = True
+                break
             except Exception:
                 continue
+
+        if applied:
+            last = getattr(self, '_last_applied_wallpaper', None)
+            if last != self.wallpaper:
+                self._last_applied_wallpaper = self.wallpaper
+                GLib.timeout_add(400, self._refresh_transparent_docks)
+
+    def _refresh_transparent_docks(self):
+        """Reinicia docks que se 'pintan' con el wallpaper como fondo y no
+        detectan cambios automáticos en X.
+
+        wbar es el caso típico: toma una captura del fondo al iniciar y se
+        queda con esa imagen aunque el wallpaper cambie. La forma estándar
+        de forzarle un refresh es matarla y relanzarla.
+
+        Este método es no-op si el dock no está instalado o no está
+        corriendo. Llamado desde _sync_root_wallpaper únicamente cuando el
+        wallpaper realmente cambia.
+        """
+        # wbar
+        if shutil.which('/usr/bin/wbar') or shutil.which('wbar'):
+            try:
+
+                running = subprocess.run(
+                    ['pgrep', '-x', 'wbar'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                ).returncode == 0
+                if running:
+                    subprocess.Popen(
+                        ['pkill', '-x', 'wbar'],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    ).wait(timeout=2)
+                    GLib.timeout_add(250, self._launch_wbar)
+            except Exception:
+                pass
+        return False
+
+    def _launch_wbar(self):
+        """Relanza wbar en background, desconectada del proceso de
+        EssoraFM (start_new_session=True para que sobreviva si EssoraFM
+        se cierra)."""
+        try:
+            subprocess.Popen(
+                ['wbar'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception:
+            pass
+        return False
 
     def _run_action(self, template, path):
         if not template or not path:
@@ -1667,13 +1723,11 @@ class EssoraDesktop(Gtk.Window):
         sort_menu.set_submenu(submenu)
         menu.append(sort_menu)
 
-        # Orden inverso (descendente)
         reverse_item = Gtk.CheckMenuItem(label=tr('desktop_sort_reverse'))
         reverse_item.set_active(self.sort_reverse)
         reverse_item.connect('toggled', self._toggle_sort_reverse)
         menu.append(reverse_item)
 
-        # Auto organizar
         auto_item = Gtk.CheckMenuItem(label=tr('desktop_auto_arrange'))
         auto_item.set_active(self.auto_arrange)
         auto_item.connect('toggled', self._toggle_auto_arrange)
