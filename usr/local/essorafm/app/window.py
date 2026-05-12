@@ -21,23 +21,85 @@ from services import themes as theme_service
 
 class EssoraFMApp(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.NON_UNIQUE)
+        single = self._read_single_instance_pref()
+        flags = Gio.ApplicationFlags.HANDLES_OPEN
+        if not single:
+            flags |= Gio.ApplicationFlags.NON_UNIQUE
+        super().__init__(application_id=APP_ID, flags=flags)
         self.window = None
         self.start_path = None
+        self._single_instance = single
+
+    @staticmethod
+    def _read_single_instance_pref():
+        """Lee la preferencia 'single_instance' del config.ini sin crear
+        SettingsManager (para no requerir GTK aún). Default: True.
+
+        Usa configparser, igual que el resto de EssoraFM, así soporta
+        secciones [Main] / [DEFAULT] que es como guarda el archivo."""
+        try:
+            import os
+            import configparser
+            cfg_path = os.path.join(os.path.expanduser('~'),
+                                    '.config', 'essorafm', 'config.ini')
+            if not os.path.isfile(cfg_path):
+                return True
+            parser = configparser.ConfigParser(strict=False)
+            parser.read(cfg_path, encoding='utf-8')
+            for section in ('Main', 'DEFAULT'):
+                if parser.has_option(section, 'single_instance'):
+                    val = parser.get(section, 'single_instance').strip().lower()
+                    return val in ('1', 'true', 'yes', 'on')
+        except Exception:
+            pass
+        return True
 
     def do_activate(self):
         if self.window is None:
             self.window = MainWindow(self)
         self.window.present()
 
+    def do_open(self, files, n_files, hint):
+        """Llamado por GApplication cuando alguien invoca la app con
+        archivos/paths como argumentos. En modo single_instance, esta
+        invocación llega a la PRIMERA instancia ya corriendo — la segunda
+        proceso se cierra inmediatamente después de mandarnos los files.
+
+        Abre cada path como una pestaña nueva en la ventana existente.
+        Si todavía no hay ventana (primera invocación), la crea con el
+        primer path como start_path y abre el resto como pestañas.
+        """
+        if self.window is None:
+            if files:
+                first = files[0].get_path()
+                if first and os.path.isdir(first):
+                    self.start_path = first
+                    files = files[1:]
+            self.window = MainWindow(self)
+
+        for gfile in files:
+            path = gfile.get_path()
+            if path and os.path.isdir(path):
+                try:
+                    self.window.tabs.add_tab(path)
+                except Exception:
+                    try:
+                        self.window.open_path(path)
+                    except Exception:
+                        pass
+        self.window.present()
+
     def run(self, argv):
         cleaned = [argv[0]] if argv else []
+        path_args = []
         for arg in argv[1:]:
             if not arg.startswith('-') and os.path.exists(arg):
-                self.start_path = os.path.abspath(arg)
+                path_args.append(arg)
                 continue
             cleaned.append(arg)
-        return super().run(cleaned)
+        if path_args:
+            self.start_path = os.path.abspath(path_args[0])
+        return super().run(cleaned + path_args)
 
 
 class MainWindow(Gtk.ApplicationWindow):
@@ -96,6 +158,7 @@ class MainWindow(Gtk.ApplicationWindow):
                                on_sort=self._on_sort_changed,
                                on_split_view=self._on_split_view_toggled,
                                on_find_files=self.open_find_files,
+                               on_paste=self.paste_from_clipboard,
                                settings_manager=self.settings_manager)
         self.pathbar = PathBar(self.open_path, on_search_changed=self._on_search_changed)
 
@@ -710,6 +773,28 @@ class MainWindow(Gtk.ApplicationWindow):
         if view:
             view.create_folder_dialog()
 
+    def paste_from_clipboard(self):
+        """Disparador del botón "Pegar" de la toolbar. Pega en el
+        directorio actual de la vista activa. Usa el clipboard interno
+        de la vista (self.clipboard_paths) llenado por Copiar o Cortar.
+        """
+        view = self.current_view()
+        if view:
+            view.paste_into_current()
+            self.sync_paste_button()
+
+    def sync_paste_button(self):
+        """Actualiza el estado del botón "Pegar" de la toolbar según si
+        la vista activa tiene algo en el clipboard. Llamar desde la
+        vista cuando cambia el clipboard (copy/cut/paste).
+        """
+        view = self.current_view()
+        has_items = bool(view and view.clipboard_paths)
+        try:
+            self.toolbar.set_paste_sensitive(has_items)
+        except Exception:
+            pass
+
     def toggle_hidden(self, *_args):
         view = self.current_view()
         if view:
@@ -805,6 +890,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.show_message(tr('settings_applied'))
 
     def show_preferences(self, *_args):
+        old_single_instance = self.settings_manager.get_bool('single_instance', True)
         dialog = PreferencesDialog(self, self.settings_manager)
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
@@ -856,7 +942,11 @@ class MainWindow(Gtk.ApplicationWindow):
             
             self.apply_ui_settings()
             self._apply_app_theme()
-            self.show_message(tr('saved_preferences'))
+            new_single_instance = self.settings_manager.get_bool('single_instance', True)
+            if new_single_instance != old_single_instance:
+                self.show_message(tr('single_instance_restart_hint'))
+            else:
+                self.show_message(tr('saved_preferences'))
         dialog.destroy()
 
     def show_about(self, *_args):

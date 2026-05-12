@@ -427,7 +427,7 @@ class DesktopFileIcon(Gtk.EventBox):
             return True
         return False
 
-    def _on_motion(self, _widget, event)
+    def _on_motion(self, _widget, event):
         if getattr(self.desktop, 'auto_arrange', False):
             return False
         if not (event.state & Gdk.ModifierType.BUTTON1_MASK):

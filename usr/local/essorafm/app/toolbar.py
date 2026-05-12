@@ -31,7 +31,7 @@ class Toolbar(Gtk.ScrolledWindow):
     def __init__(self, on_back, on_up, on_refresh, on_new_tab, on_new_folder,
                  on_toggle_hidden, on_preferences=None, on_duplicates=None,
                  on_view_mode=None, on_sort=None, settings_manager=None,
-                 on_split_view=None, on_find_files=None):
+                 on_split_view=None, on_find_files=None, on_paste=None):
         super().__init__()
         self.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.set_shadow_type(Gtk.ShadowType.NONE)
@@ -45,6 +45,7 @@ class Toolbar(Gtk.ScrolledWindow):
         self.on_view_mode      = on_view_mode
         self.on_sort           = on_sort
         self.on_split_view     = on_split_view
+        self.on_paste          = on_paste
         self.settings_manager  = settings_manager
         self._syncing_hidden   = False
         self._syncing_view     = False
@@ -72,6 +73,19 @@ class Toolbar(Gtk.ScrolledWindow):
             self.box.pack_start(btn, False, False, 0)
             self._nav_buttons.append(btn)
             self._button_size_group.add_widget(btn)
+
+        # Botón "Pegar" — siempre visible en la toolbar. Se habilita
+        # cuando hay algo en el clipboard (la window llama
+        # set_paste_sensitive() al copiar/cortar). Click pega en el
+        # directorio actual de la pestaña activa.
+        if on_paste is not None:
+            self.paste_button = self._make_nav_button(
+                'edit-paste-symbolic', tr('paste_short'), on_paste)
+            self.paste_button.set_sensitive(False)  # arranca apagado
+            self.box.pack_start(self.paste_button, False, False, 0)
+            self._button_size_group.add_widget(self.paste_button)
+        else:
+            self.paste_button = None
 
         self.hidden_button = Gtk.ToggleButton()
         self.hidden_button.get_style_context().add_class('essorafm-toolbutton')
@@ -163,6 +177,14 @@ class Toolbar(Gtk.ScrolledWindow):
         btn._is_radio = False
         btn.connect('clicked', lambda b, c=cb: c() if c else None)
         return btn
+
+    def set_paste_sensitive(self, enabled):
+        """Habilita/deshabilita el botón Pegar de la toolbar. La window
+        lo invoca cuando el clipboard interno tiene items para pegar
+        (después de Copiar o Cortar) o cuando se acaba de pegar (vacío).
+        """
+        if self.paste_button is not None:
+            self.paste_button.set_sensitive(bool(enabled))
 
 
     def _build_sort_menu(self):

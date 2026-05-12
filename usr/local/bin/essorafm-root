@@ -1,0 +1,3 @@
+#!/bin/sh
+GKSUGUI="/usr/local/essorafm/bin/gksu"
+$GKSUGUI /usr/local/essorafm/essorafm.py "$@"

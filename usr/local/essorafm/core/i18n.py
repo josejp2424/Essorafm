@@ -486,7 +486,6 @@ for _code, _strings in GITHUB_STRINGS.items():
         STRINGS[_code].update(_strings)
 
 
-# === Nilson contributions: extra toolbar style ===
 TOOLBAR_FLAT_STRINGS = {
     'en': 'Icons only (flat)',
     'es': 'Solo iconos (plano)',
@@ -919,7 +918,6 @@ for _code, _strings in HARDCODED_FIX_STRINGS.items():
 
 
 
-# === Desktop sort/arrange menu (Windows-style right-click on the desktop) ===
 DESKTOP_SORT_STRINGS = {
     'en': {
         'desktop_sort_by': 'Sort by',
@@ -1037,7 +1035,6 @@ for _code, _strings in DESKTOP_SORT_STRINGS.items():
 
 
 
-# === Find Files dialog (search) ===
 FIND_FILES_STRINGS = {
     'en': {
         'find_files_title': 'Find Files',
@@ -1586,8 +1583,6 @@ for _code, _strings in FIND_FILES_STRINGS.items():
         STRINGS[_code].update(_strings)
 
 
-
-# === Drive icons position submenu (Nilsonmorales contribution) ===
 DRIVE_POSITION_STRINGS = {
     'en': {
         'desktop_drive_position': 'Drive icons position',
@@ -1680,6 +1675,392 @@ for _code, _strings in DRIVE_POSITION_STRINGS.items():
         STRINGS[_code].update(_strings)
 
 
+NEW_FILE_TEMPLATES_STRINGS = {
+    'en': {
+        'new_file': 'New file',
+        'new_file_title': 'Create new file',
+        'new_file_prompt': 'Name for the new file:',
+        'new_file_edit_templates': 'Edit templates folder…',
+        'new_file_error_no_template': 'Template file not found',
+        'new_file_exists': 'A file named "{name}" already exists.',
+        'new_file_created': 'Created {name}',
+        'create': 'Create',
+    },
+    'es': {
+        'new_file': 'Archivo nuevo',
+        'new_file_title': 'Crear archivo nuevo',
+        'new_file_prompt': 'Nombre para el archivo nuevo:',
+        'new_file_edit_templates': 'Editar carpeta de plantillas…',
+        'new_file_error_no_template': 'Plantilla no encontrada',
+        'new_file_exists': 'Ya existe un archivo llamado "{name}".',
+        'new_file_created': 'Creado {name}',
+        'create': 'Crear',
+    },
+    'ca': {
+        'new_file': 'Fitxer nou',
+        'new_file_title': 'Crea un fitxer nou',
+        'new_file_prompt': 'Nom per al fitxer nou:',
+        'new_file_edit_templates': 'Edita la carpeta de plantilles…',
+        'new_file_error_no_template': 'No s\'ha trobat la plantilla',
+        'new_file_exists': 'Ja existeix un fitxer anomenat "{name}".',
+        'new_file_created': 'Creat {name}',
+        'create': 'Crea',
+    },
+    'de': {
+        'new_file': 'Neue Datei',
+        'new_file_title': 'Neue Datei erstellen',
+        'new_file_prompt': 'Name für die neue Datei:',
+        'new_file_edit_templates': 'Vorlagenordner bearbeiten…',
+        'new_file_error_no_template': 'Vorlage nicht gefunden',
+        'new_file_exists': 'Eine Datei "{name}" existiert bereits.',
+        'new_file_created': 'Erstellt: {name}',
+        'create': 'Erstellen',
+    },
+    'fr': {
+        'new_file': 'Nouveau fichier',
+        'new_file_title': 'Créer un nouveau fichier',
+        'new_file_prompt': 'Nom du nouveau fichier :',
+        'new_file_edit_templates': 'Modifier le dossier des modèles…',
+        'new_file_error_no_template': 'Modèle introuvable',
+        'new_file_exists': 'Un fichier nommé "{name}" existe déjà.',
+        'new_file_created': '{name} créé',
+        'create': 'Créer',
+    },
+    'it': {
+        'new_file': 'Nuovo file',
+        'new_file_title': 'Crea nuovo file',
+        'new_file_prompt': 'Nome per il nuovo file:',
+        'new_file_edit_templates': 'Modifica cartella modelli…',
+        'new_file_error_no_template': 'Modello non trovato',
+        'new_file_exists': 'Un file chiamato "{name}" esiste già.',
+        'new_file_created': 'Creato {name}',
+        'create': 'Crea',
+    },
+    'pt': {
+        'new_file': 'Ficheiro novo',
+        'new_file_title': 'Criar ficheiro novo',
+        'new_file_prompt': 'Nome para o novo ficheiro:',
+        'new_file_edit_templates': 'Editar pasta de modelos…',
+        'new_file_error_no_template': 'Modelo não encontrado',
+        'new_file_exists': 'Já existe um ficheiro chamado "{name}".',
+        'new_file_created': 'Criado {name}',
+        'create': 'Criar',
+    },
+    'hu': {
+        'new_file': 'Új fájl',
+        'new_file_title': 'Új fájl létrehozása',
+        'new_file_prompt': 'Név az új fájlnak:',
+        'new_file_edit_templates': 'Sablonmappa szerkesztése…',
+        'new_file_error_no_template': 'Sablon nem található',
+        'new_file_exists': 'Már létezik "{name}" nevű fájl.',
+        'new_file_created': '{name} létrehozva',
+        'create': 'Létrehozás',
+    },
+    'ja': {
+        'new_file': '新しいファイル',
+        'new_file_title': '新しいファイルを作成',
+        'new_file_prompt': '新しいファイル名:',
+        'new_file_edit_templates': 'テンプレートフォルダを編集…',
+        'new_file_error_no_template': 'テンプレートが見つかりません',
+        'new_file_exists': '"{name}" という名前のファイルは既に存在します。',
+        'new_file_created': '{name} を作成しました',
+        'create': '作成',
+    },
+    'ru': {
+        'new_file': 'Новый файл',
+        'new_file_title': 'Создать новый файл',
+        'new_file_prompt': 'Имя нового файла:',
+        'new_file_edit_templates': 'Редактировать папку шаблонов…',
+        'new_file_error_no_template': 'Шаблон не найден',
+        'new_file_exists': 'Файл с именем "{name}" уже существует.',
+        'new_file_created': '{name} создан',
+        'create': 'Создать',
+    },
+    'zh': {
+        'new_file': '新建文件',
+        'new_file_title': '新建文件',
+        'new_file_prompt': '新文件的名称:',
+        'new_file_edit_templates': '编辑模板文件夹…',
+        'new_file_error_no_template': '未找到模板',
+        'new_file_exists': '名为 "{name}" 的文件已存在。',
+        'new_file_created': '已创建 {name}',
+        'create': '创建',
+    },
+    'ar': {
+        'new_file': 'ملف جديد',
+        'new_file_title': 'إنشاء ملف جديد',
+        'new_file_prompt': 'اسم الملف الجديد:',
+        'new_file_edit_templates': 'تحرير مجلد القوالب…',
+        'new_file_error_no_template': 'القالب غير موجود',
+        'new_file_exists': 'يوجد بالفعل ملف باسم "{name}".',
+        'new_file_created': 'تم إنشاء {name}',
+        'create': 'إنشاء',
+    },
+}
+
+for _code, _strings in NEW_FILE_TEMPLATES_STRINGS.items():
+    if _code in STRINGS:
+        STRINGS[_code].update(_strings)
+
+
+SINGLE_INSTANCE_STRINGS = {
+    'en': {
+        'single_instance': 'Single instance (open new tabs in existing window)',
+        'single_instance_tooltip': 'When enabled, launching essorafm with a path while the app is already running opens a new tab in the existing window instead of starting another window.',
+        'single_instance_restart_hint': 'Preference saved. Restart EssoraFM for the single-instance change to take effect.',
+    },
+    'es': {
+        'single_instance': 'Instancia única (abrir pestañas nuevas en la ventana existente)',
+        'single_instance_tooltip': 'Cuando está activado, ejecutar essorafm con una ruta mientras la app ya está corriendo abre una pestaña nueva en la ventana existente en lugar de abrir otra ventana.',
+        'single_instance_restart_hint': 'Preferencia guardada. Reiniciá EssoraFM para que el cambio de instancia única surta efecto.',
+    },
+    'ca': {
+        'single_instance': 'Instància única (obre pestanyes noves a la finestra existent)',
+        'single_instance_tooltip': 'Quan està activat, executar essorafm amb una ruta mentre l\'app ja s\'està executant obre una pestanya nova a la finestra existent en lloc d\'obrir una altra finestra.',
+        'single_instance_restart_hint': 'Preferència desada. Reinicia EssoraFM perquè el canvi d\'instància única tingui efecte.',
+    },
+    'de': {
+        'single_instance': 'Einzelinstanz (neue Tabs im vorhandenen Fenster öffnen)',
+        'single_instance_tooltip': 'Wenn aktiviert, öffnet essorafm mit einem Pfad einen neuen Tab im vorhandenen Fenster, anstatt ein weiteres Fenster zu starten.',
+        'single_instance_restart_hint': 'Einstellung gespeichert. Starte EssoraFM neu, damit die Einzelinstanz-Einstellung wirksam wird.',
+    },
+    'fr': {
+        'single_instance': 'Instance unique (ouvrir de nouveaux onglets dans la fenêtre existante)',
+        'single_instance_tooltip': 'Lorsqu\'activé, lancer essorafm avec un chemin pendant que l\'app est déjà en cours d\'exécution ouvre un nouvel onglet dans la fenêtre existante au lieu d\'ouvrir une autre fenêtre.',
+        'single_instance_restart_hint': 'Préférence enregistrée. Redémarre EssoraFM pour que le changement d\'instance unique prenne effet.',
+    },
+    'it': {
+        'single_instance': 'Istanza singola (apre nuove schede nella finestra esistente)',
+        'single_instance_tooltip': 'Quando abilitato, avviare essorafm con un percorso mentre l\'app è già in esecuzione apre una nuova scheda nella finestra esistente invece di avviare un\'altra finestra.',
+        'single_instance_restart_hint': 'Preferenza salvata. Riavvia EssoraFM affinché la modifica dell\'istanza singola abbia effetto.',
+    },
+    'pt': {
+        'single_instance': 'Instância única (abre novos separadores na janela existente)',
+        'single_instance_tooltip': 'Quando ativado, iniciar o essorafm com um caminho enquanto a aplicação já está em execução abre um novo separador na janela existente em vez de iniciar outra janela.',
+        'single_instance_restart_hint': 'Preferência guardada. Reinicie o EssoraFM para a alteração de instância única ter efeito.',
+    },
+    'hu': {
+        'single_instance': 'Egyetlen példány (új lapok megnyitása a meglévő ablakban)',
+        'single_instance_tooltip': 'Ha engedélyezve van, az essorafm útvonallal való indítása, miközben az alkalmazás már fut, új lapot nyit a meglévő ablakban egy másik ablak indítása helyett.',
+        'single_instance_restart_hint': 'Beállítás elmentve. Indítsd újra az EssoraFM-et, hogy az egyetlen példány módosítás érvénybe lépjen.',
+    },
+    'ja': {
+        'single_instance': '単一インスタンス(既存のウィンドウに新しいタブを開く)',
+        'single_instance_tooltip': '有効の場合、アプリが既に実行中のときにパスを指定して essorafm を起動すると、別のウィンドウを起動するのではなく既存のウィンドウに新しいタブを開きます。',
+        'single_instance_restart_hint': '設定を保存しました。単一インスタンスの変更を有効にするには EssoraFM を再起動してください。',
+    },
+    'ru': {
+        'single_instance': 'Один экземпляр (открывать новые вкладки в существующем окне)',
+        'single_instance_tooltip': 'Когда включено, запуск essorafm с путём, когда приложение уже запущено, открывает новую вкладку в существующем окне вместо запуска другого окна.',
+        'single_instance_restart_hint': 'Настройка сохранена. Перезапустите EssoraFM, чтобы изменение одного экземпляра вступило в силу.',
+    },
+    'zh': {
+        'single_instance': '单实例(在现有窗口中打开新标签)',
+        'single_instance_tooltip': '启用后,在应用已运行时使用路径启动 essorafm 会在现有窗口中打开新标签,而不是启动另一个窗口。',
+        'single_instance_restart_hint': '已保存首选项。重启 EssoraFM 以使单实例更改生效。',
+    },
+    'ar': {
+        'single_instance': 'مثيل واحد (فتح علامات تبويب جديدة في النافذة الموجودة)',
+        'single_instance_tooltip': 'عند التمكين، يؤدي تشغيل essorafm بمسار أثناء تشغيل التطبيق بالفعل إلى فتح علامة تبويب جديدة في النافذة الموجودة بدلاً من بدء نافذة أخرى.',
+        'single_instance_restart_hint': 'تم حفظ التفضيل. أعد تشغيل EssoraFM لتفعيل تغيير المثيل الواحد.',
+    },
+}
+
+for _code, _strings in SINGLE_INSTANCE_STRINGS.items():
+    if _code in STRINGS:
+        STRINGS[_code].update(_strings)
+
+
+
+
+
+CUT_DUP_LINK_STRINGS = {
+    'en': {
+        'cut': 'Cut',
+        'cut_items': 'item(s) cut',
+        'duplicate': 'Duplicate',
+        'duplicated': 'Duplicated as {name}',
+        'duplicated_n': '{n} items duplicated',
+        'duplicate_exists': '"{name}" already exists',
+        'dup_suffix': 'copy',
+        'create_link': 'Create link',
+        'relative_link': 'Relative link',
+        'link_suffix': 'link',
+        'link_created': 'Link created: {name}',
+        'links_created_n': '{n} links created',
+        'paste_short': 'Paste',
+    },
+    'es': {
+        'cut': 'Cortar',
+        'cut_items': 'elementos cortados',
+        'duplicate': 'Duplicar',
+        'duplicated': 'Duplicado como {name}',
+        'duplicated_n': '{n} elementos duplicados',
+        'duplicate_exists': '"{name}" ya existe',
+        'dup_suffix': 'copia',
+        'create_link': 'Crear enlace',
+        'relative_link': 'Enlace relativo',
+        'link_suffix': 'enlace',
+        'link_created': 'Enlace creado: {name}',
+        'links_created_n': '{n} enlaces creados',
+        'paste_short': 'Pegar',
+    },
+    'ca': {
+        'cut': 'Retalla',
+        'cut_items': 'elements retallats',
+        'duplicate': 'Duplica',
+        'duplicated': 'Duplicat com {name}',
+        'duplicated_n': '{n} elements duplicats',
+        'duplicate_exists': '"{name}" ja existeix',
+        'dup_suffix': 'copia',
+        'create_link': 'Crea enllaç',
+        'relative_link': 'Enllaç relatiu',
+        'link_suffix': 'enllaç',
+        'link_created': 'Enllaç creat: {name}',
+        'links_created_n': '{n} enllaços creats',
+        'paste_short': 'Enganxa',
+    },
+    'de': {
+        'cut': 'Ausschneiden',
+        'cut_items': 'Element(e) ausgeschnitten',
+        'duplicate': 'Duplizieren',
+        'duplicated': 'Dupliziert als {name}',
+        'duplicated_n': '{n} Elemente dupliziert',
+        'duplicate_exists': '"{name}" existiert bereits',
+        'dup_suffix': 'Kopie',
+        'create_link': 'Verknüpfung erstellen',
+        'relative_link': 'Relative Verknüpfung',
+        'link_suffix': 'Verknüpfung',
+        'link_created': 'Verknüpfung erstellt: {name}',
+        'links_created_n': '{n} Verknüpfungen erstellt',
+        'paste_short': 'Einfügen',
+    },
+    'fr': {
+        'cut': 'Couper',
+        'cut_items': 'élément(s) coupé(s)',
+        'duplicate': 'Dupliquer',
+        'duplicated': 'Dupliqué en tant que {name}',
+        'duplicated_n': '{n} éléments dupliqués',
+        'duplicate_exists': '"{name}" existe déjà',
+        'dup_suffix': 'copie',
+        'create_link': 'Créer un lien',
+        'relative_link': 'Lien relatif',
+        'link_suffix': 'lien',
+        'link_created': 'Lien créé : {name}',
+        'links_created_n': '{n} liens créés',
+        'paste_short': 'Coller',
+    },
+    'it': {
+        'cut': 'Taglia',
+        'cut_items': 'elementi tagliati',
+        'duplicate': 'Duplica',
+        'duplicated': 'Duplicato come {name}',
+        'duplicated_n': '{n} elementi duplicati',
+        'duplicate_exists': '"{name}" esiste già',
+        'dup_suffix': 'copia',
+        'create_link': 'Crea collegamento',
+        'relative_link': 'Collegamento relativo',
+        'link_suffix': 'collegamento',
+        'link_created': 'Collegamento creato: {name}',
+        'links_created_n': '{n} collegamenti creati',
+        'paste_short': 'Incolla',
+    },
+    'pt': {
+        'cut': 'Recortar',
+        'cut_items': 'item(s) recortado(s)',
+        'duplicate': 'Duplicar',
+        'duplicated': 'Duplicado como {name}',
+        'duplicated_n': '{n} itens duplicados',
+        'duplicate_exists': '"{name}" já existe',
+        'dup_suffix': 'cópia',
+        'create_link': 'Criar ligação',
+        'relative_link': 'Ligação relativa',
+        'link_suffix': 'ligação',
+        'link_created': 'Ligação criada: {name}',
+        'links_created_n': '{n} ligações criadas',
+        'paste_short': 'Colar',
+    },
+    'hu': {
+        'cut': 'Kivágás',
+        'cut_items': 'elem kivágva',
+        'duplicate': 'Megkettőzés',
+        'duplicated': 'Megkettőzve mint {name}',
+        'duplicated_n': '{n} elem megkettőzve',
+        'duplicate_exists': '"{name}" már létezik',
+        'dup_suffix': 'másolat',
+        'create_link': 'Hivatkozás létrehozása',
+        'relative_link': 'Relatív hivatkozás',
+        'link_suffix': 'hivatkozás',
+        'link_created': 'Hivatkozás létrehozva: {name}',
+        'links_created_n': '{n} hivatkozás létrehozva',
+        'paste_short': 'Beillesztés',
+    },
+    'ja': {
+        'cut': '切り取り',
+        'cut_items': '個の項目を切り取り',
+        'duplicate': '複製',
+        'duplicated': '{name} として複製しました',
+        'duplicated_n': '{n} 個の項目を複製しました',
+        'duplicate_exists': '"{name}" は既に存在します',
+        'dup_suffix': 'コピー',
+        'create_link': 'リンクを作成',
+        'relative_link': '相対リンク',
+        'link_suffix': 'リンク',
+        'link_created': 'リンクを作成: {name}',
+        'links_created_n': '{n} 個のリンクを作成しました',
+        'paste_short': '貼り付け',
+    },
+    'ru': {
+        'cut': 'Вырезать',
+        'cut_items': 'элементов вырезано',
+        'duplicate': 'Дублировать',
+        'duplicated': 'Дублировано как {name}',
+        'duplicated_n': '{n} элементов дублировано',
+        'duplicate_exists': '"{name}" уже существует',
+        'dup_suffix': 'копия',
+        'create_link': 'Создать ссылку',
+        'relative_link': 'Относительная ссылка',
+        'link_suffix': 'ссылка',
+        'link_created': 'Ссылка создана: {name}',
+        'links_created_n': '{n} ссылок создано',
+        'paste_short': 'Вставить',
+    },
+    'zh': {
+        'cut': '剪切',
+        'cut_items': '个项目已剪切',
+        'duplicate': '复制',
+        'duplicated': '已复制为 {name}',
+        'duplicated_n': '已复制 {n} 个项目',
+        'duplicate_exists': '"{name}" 已存在',
+        'dup_suffix': '副本',
+        'create_link': '创建链接',
+        'relative_link': '相对链接',
+        'link_suffix': '链接',
+        'link_created': '已创建链接: {name}',
+        'links_created_n': '已创建 {n} 个链接',
+        'paste_short': '粘贴',
+    },
+    'ar': {
+        'cut': 'قص',
+        'cut_items': 'عناصر مقطوعة',
+        'duplicate': 'تكرار',
+        'duplicated': 'تم تكرار كـ {name}',
+        'duplicated_n': 'تم تكرار {n} عناصر',
+        'duplicate_exists': '"{name}" موجود بالفعل',
+        'dup_suffix': 'نسخة',
+        'create_link': 'إنشاء رابط',
+        'relative_link': 'رابط نسبي',
+        'link_suffix': 'رابط',
+        'link_created': 'تم إنشاء الرابط: {name}',
+        'links_created_n': 'تم إنشاء {n} روابط',
+        'paste_short': 'لصق',
+    },
+}
+
+for _code, _strings in CUT_DUP_LINK_STRINGS.items():
+    if _code in STRINGS:
+        STRINGS[_code].update(_strings)
+
 
 def tr(key: str) -> str:
     if key in STRINGS.get(LANG, {}):
@@ -1687,3 +2068,41 @@ def tr(key: str) -> str:
     if key in STRINGS['es']:
         return STRINGS['es'][key]
     return STRINGS['en'].get(key, key)
+
+
+
+_EXTRA_024245 = {
+    "en": {
+        "send_to": "Send To...", "sendto_empty": "No Send To entries", "configure_sendto": "Configure Send To...",
+        "appdir_apps": "Applications", "open_apps_folder": "Open /usr/local/apps",
+        "applications": "Applications", "change_wallpaper": "Change wallpaper", "add_desktop_icon": "Add desktop icon",
+        "desktop_preferences": "Desktop preferences", "refresh_desktop": "Refresh desktop",
+        "show_desktop_files": "Show desktop files", "show_drive_icons": "Show drive icons",
+        "desktop_drive_icons": "Desktop drive icons", "mount": "Mount", "unmount": "Unmount", "eject": "Eject"
+    },
+    "es": {
+        "send_to": "Enviar a...", "sendto_empty": "No hay entradas Enviar a", "configure_sendto": "Configurar Enviar a...",
+        "appdir_apps": "Aplicaciones", "open_apps_folder": "Abrir /usr/local/apps",
+        "applications": "Aplicaciones", "change_wallpaper": "Cambiar wallpaper", "add_desktop_icon": "Agregar icono al escritorio",
+        "desktop_preferences": "Preferencias del escritorio", "refresh_desktop": "Actualizar escritorio",
+        "show_desktop_files": "Mostrar archivos del escritorio", "show_drive_icons": "Mostrar iconos de unidades",
+        "desktop_drive_icons": "Iconos de unidades en escritorio", "mount": "Montar", "unmount": "Desmontar", "eject": "Expulsar"
+    },
+    "ca": {"send_to": "Envia a...", "sendto_empty": "No hi ha entrades", "configure_sendto": "Configura Envia a...", "appdir_apps": "Aplicacions", "open_apps_folder": "Obre /usr/local/apps", "applications": "Aplicacions", "change_wallpaper": "Canvia fons", "add_desktop_icon": "Afegeix icona a l'escriptori", "desktop_preferences": "Preferències de l'escriptori", "refresh_desktop": "Actualitza escriptori", "show_desktop_files": "Mostra fitxers de l'escriptori", "show_drive_icons": "Mostra icones d'unitats", "desktop_drive_icons": "Icones d'unitats", "mount": "Munta", "unmount": "Desmunta", "eject": "Expulsa"},
+    "de": {"send_to": "Senden an...", "sendto_empty": "Keine Einträge", "configure_sendto": "Senden an konfigurieren...", "appdir_apps": "Anwendungen", "open_apps_folder": "/usr/local/apps öffnen", "applications": "Anwendungen", "change_wallpaper": "Hintergrund ändern", "add_desktop_icon": "Desktopsymbol hinzufügen", "desktop_preferences": "Desktop-Einstellungen", "refresh_desktop": "Desktop aktualisieren", "show_desktop_files": "Desktop-Dateien anzeigen", "show_drive_icons": "Laufwerkssymbole anzeigen", "desktop_drive_icons": "Laufwerkssymbole", "mount": "Einhängen", "unmount": "Aushängen", "eject": "Auswerfen"},
+    "fr": {"send_to": "Envoyer vers...", "sendto_empty": "Aucune entrée", "configure_sendto": "Configurer Envoyer vers...", "appdir_apps": "Applications", "open_apps_folder": "Ouvrir /usr/local/apps", "applications": "Applications", "change_wallpaper": "Changer le fond d’écran", "add_desktop_icon": "Ajouter une icône au bureau", "desktop_preferences": "Préférences du bureau", "refresh_desktop": "Actualiser le bureau", "show_desktop_files": "Afficher les fichiers du bureau", "show_drive_icons": "Afficher les icônes de volumes", "desktop_drive_icons": "Icônes de volumes", "mount": "Monter", "unmount": "Démonter", "eject": "Éjecter"},
+    "it": {"send_to": "Invia a...", "sendto_empty": "Nessuna voce", "configure_sendto": "Configura Invia a...", "appdir_apps": "Applicazioni", "open_apps_folder": "Apri /usr/local/apps", "applications": "Applicazioni", "change_wallpaper": "Cambia sfondo", "add_desktop_icon": "Aggiungi icona al desktop", "desktop_preferences": "Preferenze desktop", "refresh_desktop": "Aggiorna desktop", "show_desktop_files": "Mostra file del desktop", "show_drive_icons": "Mostra icone unità", "desktop_drive_icons": "Icone unità desktop", "mount": "Monta", "unmount": "Smonta", "eject": "Espelli"},
+    "pt": {"send_to": "Enviar para...", "sendto_empty": "Nenhuma entrada", "configure_sendto": "Configurar Enviar para...", "appdir_apps": "Aplicativos", "open_apps_folder": "Abrir /usr/local/apps", "applications": "Aplicativos", "change_wallpaper": "Alterar papel de parede", "add_desktop_icon": "Adicionar ícone à área de trabalho", "desktop_preferences": "Preferências da área de trabalho", "refresh_desktop": "Atualizar área de trabalho", "show_desktop_files": "Mostrar arquivos da área de trabalho", "show_drive_icons": "Mostrar ícones de unidades", "desktop_drive_icons": "Ícones de unidades", "mount": "Montar", "unmount": "Desmontar", "eject": "Ejetar"},
+    "hu": {"send_to": "Küldés ide...", "sendto_empty": "Nincs bejegyzés", "configure_sendto": "Küldés ide beállítása...", "appdir_apps": "Alkalmazások", "open_apps_folder": "/usr/local/apps megnyitása", "applications": "Alkalmazások", "change_wallpaper": "Háttérkép módosítása", "add_desktop_icon": "Asztali ikon hozzáadása", "desktop_preferences": "Asztal beállításai", "refresh_desktop": "Asztal frissítése", "show_desktop_files": "Asztali fájlok megjelenítése", "show_drive_icons": "Meghajtó ikonok megjelenítése", "desktop_drive_icons": "Meghajtó ikonok", "mount": "Csatolás", "unmount": "Leválasztás", "eject": "Kiadás"},
+    "ja": {"send_to": "送る...", "sendto_empty": "項目がありません", "configure_sendto": "送るを設定...", "appdir_apps": "アプリケーション", "open_apps_folder": "/usr/local/apps を開く", "applications": "アプリケーション", "change_wallpaper": "壁紙を変更", "add_desktop_icon": "デスクトップアイコンを追加", "desktop_preferences": "デスクトップ設定", "refresh_desktop": "デスクトップを更新", "show_desktop_files": "デスクトップファイルを表示", "show_drive_icons": "ドライブアイコンを表示", "desktop_drive_icons": "ドライブアイコン", "mount": "マウント", "unmount": "アンマウント", "eject": "取り出し"},
+    "ru": {"send_to": "Отправить в...", "sendto_empty": "Нет пунктов", "configure_sendto": "Настроить отправку...", "appdir_apps": "Приложения", "open_apps_folder": "Открыть /usr/local/apps", "applications": "Приложения", "change_wallpaper": "Сменить обои", "add_desktop_icon": "Добавить значок на рабочий стол", "desktop_preferences": "Параметры рабочего стола", "refresh_desktop": "Обновить рабочий стол", "show_desktop_files": "Показывать файлы рабочего стола", "show_drive_icons": "Показывать значки дисков", "desktop_drive_icons": "Значки дисков", "mount": "Монтировать", "unmount": "Размонтировать", "eject": "Извлечь"},
+    "zh": {"send_to": "发送到...", "sendto_empty": "没有项目", "configure_sendto": "配置发送到...", "appdir_apps": "应用程序", "open_apps_folder": "打开 /usr/local/apps", "applications": "应用程序", "change_wallpaper": "更改壁纸", "add_desktop_icon": "添加桌面图标", "desktop_preferences": "桌面首选项", "refresh_desktop": "刷新桌面", "show_desktop_files": "显示桌面文件", "show_drive_icons": "显示驱动器图标", "desktop_drive_icons": "驱动器图标", "mount": "挂载", "unmount": "卸载", "eject": "弹出"},
+    "ar": {"send_to": "إرسال إلى...", "sendto_empty": "لا توجد عناصر", "configure_sendto": "إعداد إرسال إلى...", "appdir_apps": "التطبيقات", "open_apps_folder": "فتح /usr/local/apps", "applications": "التطبيقات", "change_wallpaper": "تغيير الخلفية", "add_desktop_icon": "إضافة أيقونة لسطح المكتب", "desktop_preferences": "تفضيلات سطح المكتب", "refresh_desktop": "تحديث سطح المكتب", "show_desktop_files": "إظهار ملفات سطح المكتب", "show_drive_icons": "إظهار أيقونات الأقراص", "desktop_drive_icons": "أيقونات الأقراص", "mount": "ضم", "unmount": "إلغاء الضم", "eject": "إخراج"}
+}
+try:
+    for _lang, _vals in _EXTRA_024245.items():
+        STRINGS.setdefault(_lang, {}).update(_vals)
+        for _k, _v in _EXTRA_024245["en"].items():
+            STRINGS[_lang].setdefault(_k, _v)
+except Exception:
+    pass

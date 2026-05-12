@@ -135,36 +135,41 @@ class PreferencesDialog(Gtk.Dialog):
         self.desktop_drive_icons.set_active(settings_manager.get_bool('desktop_drive_icons', True))
         grid1.attach(self.desktop_drive_icons, 0, 5, 2, 1)
 
+        self.single_instance = Gtk.CheckButton(label=tr('single_instance'))
+        self.single_instance.set_active(settings_manager.get_bool('single_instance', True))
+        self.single_instance.set_tooltip_text(tr('single_instance_tooltip'))
+        grid1.attach(self.single_instance, 0, 6, 2, 1)
+
         _sl_label_text = tr('sidebar_layout') if tr('sidebar_layout') != 'sidebar_layout' else 'Diseño del panel'
         _sl_classic     = tr('sidebar_layout_classic') if tr('sidebar_layout_classic') != 'sidebar_layout_classic' else 'Clásico (sidebar a la par)'
         _sl_top         = tr('sidebar_layout_top_bar') if tr('sidebar_layout_top_bar') != 'sidebar_layout_top_bar' else 'Compacto (barra arriba)'
-        grid1.attach(Gtk.Label(label=_sl_label_text, xalign=0), 0, 6, 1, 1)
+        grid1.attach(Gtk.Label(label=_sl_label_text, xalign=0), 0, 7, 1, 1)
         self.sidebar_layout_combo = Gtk.ComboBoxText()
         self.sidebar_layout_combo.append('classic', _sl_classic)
         self.sidebar_layout_combo.append('top_bar', _sl_top)
         self.sidebar_layout_combo.set_active_id(settings_manager.get('sidebar_layout', 'classic'))
-        grid1.attach(self.sidebar_layout_combo, 1, 6, 1, 1)
+        grid1.attach(self.sidebar_layout_combo, 1, 7, 1, 1)
 
         _tf_label = tr('toolbar_first')
         _tf_toolbar_first = tr('toolbar_first_option')
         _tf_pathbar_first = tr('pathbar_first_option')
-        grid1.attach(Gtk.Label(label=_tf_label, xalign=0), 0, 7, 1, 1)
+        grid1.attach(Gtk.Label(label=_tf_label, xalign=0), 0, 8, 1, 1)
         self.toolbar_first_combo = Gtk.ComboBoxText()
         self.toolbar_first_combo.append('true', _tf_toolbar_first)
         self.toolbar_first_combo.append('false', _tf_pathbar_first)
         self.toolbar_first_combo.set_active_id(
             'true' if settings_manager.get_bool('toolbar_first', True) else 'false')
-        grid1.attach(self.toolbar_first_combo, 1, 7, 1, 1)
+        grid1.attach(self.toolbar_first_combo, 1, 8, 1, 1)
 
         _bp_label = tr('bars_position')
         _bp_top = tr('bars_position_top')
         _bp_bottom = tr('bars_position_bottom')
-        grid1.attach(Gtk.Label(label=_bp_label, xalign=0), 0, 8, 1, 1)
+        grid1.attach(Gtk.Label(label=_bp_label, xalign=0), 0, 9, 1, 1)
         self.bars_position_combo = Gtk.ComboBoxText()
         self.bars_position_combo.append('top', _bp_top)
         self.bars_position_combo.append('bottom', _bp_bottom)
         self.bars_position_combo.set_active_id(settings_manager.get('bars_position', 'top'))
-        grid1.attach(self.bars_position_combo, 1, 8, 1, 1)
+        grid1.attach(self.bars_position_combo, 1, 9, 1, 1)
 
         stack.add_titled(page_general, 'general', tr('general'))
 
@@ -361,6 +366,7 @@ class PreferencesDialog(Gtk.Dialog):
             'show_thumbnails': str(self.show_thumbnails.get_active()).lower(),
             'preview_enabled': str(self.preview_enabled.get_active()).lower(),
             'desktop_drive_icons': str(self.desktop_drive_icons.get_active()).lower(),
+            'single_instance': str(self.single_instance.get_active()).lower(),
             'desktop_drive_icon_size': self.desktop_drive_icon_combo.get_active_id() or '48',
             'window_width': str(int(self.window_width_spin.get_value())),
             'window_height': str(int(self.window_height_spin.get_value())),
@@ -413,7 +419,7 @@ class AboutDialog(Gtk.Dialog):
         name_lbl.set_halign(Gtk.Align.CENTER)
         box.pack_start(name_lbl, False, False, 0)
 
-        ver_lbl = Gtk.Label(label='Version 0.4.21')
+        ver_lbl = Gtk.Label(label='Version 0.4.25-1')
         ver_lbl.get_style_context().add_class('about-version')
         ver_lbl.set_halign(Gtk.Align.CENTER)
         box.pack_start(ver_lbl, False, False, 0)

@@ -86,8 +86,6 @@ class CopyEngine:
         if not sources:
             return
 
-        # Filtrar duplicados manteniendo orden, en caso de que el caller
-        # llame con un único src después de un fallback parcial.
         seen = set()
         unique_sources = []
         for s in sources:
@@ -108,8 +106,6 @@ class CopyEngine:
         if escalator.endswith('pkexec'):
             cmd = [escalator, '/bin/cp', '-a', '--', *unique_sources, destination]
         else:
-            # gksu solo acepta un string de comando; armamos una línea
-            # con todos los orígenes escapados con shlex.quote
             import shlex
             quoted = ' '.join(shlex.quote(s) for s in unique_sources)
             quoted_dst = shlex.quote(destination)
@@ -137,9 +133,6 @@ class CopyEngine:
 
     def _copy_with_rsync(self, sources, destination, progress_cb):
         total = max(len(sources), 1)
-        # Acumulamos los archivos que fallaron por permisos para hacer
-        # UN SOLO pkexec con todos ellos al final, en lugar de uno por cada
-        # archivo (que hacía aparecer el diálogo varias veces).
         failed_for_priv = []
 
         for index, src in enumerate(sources, start=1):
@@ -192,8 +185,6 @@ class CopyEngine:
                 else:
                     raise RuntimeError(f'rsync devolvió código {code}')
 
-        # Después del loop, si algo falló por permisos, retry como
-        # privilegiado con UNA sola autenticación.
         if failed_for_priv and not self.cancelled:
             self._copy_privileged(failed_for_priv, destination, progress_cb)
 
@@ -202,8 +193,6 @@ class CopyEngine:
 
     def _copy_with_python(self, sources, destination, progress_cb):
         total = max(len(sources), 1)
-        # Mismo patrón que rsync: acumular fallos de permisos y un solo
-        # pkexec al final.
         failed_for_priv = []
 
         for index, src in enumerate(sources, start=1):

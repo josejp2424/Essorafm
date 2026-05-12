@@ -6,7 +6,8 @@ import urllib.parse
 import gi
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, Gio, GdkPixbuf, GLib
+gi.require_version('Pango', '1.0')
+from gi.repository import Gtk, Gdk, Gio, GdkPixbuf, GLib, Pango
 
 from core.filesystem import FileSystemService
 from core.privilege import run_privileged, find_escalator
@@ -52,12 +53,16 @@ class FileView(Gtk.Box):
         self.show_thumbnails = settings_manager.get_bool('show_thumbnails', True)
         self.thumbnailer = Thumbnailer(self.icon_loader, self.show_thumbnails)
         self.clipboard_paths = []
+        self.clipboard_is_cut = False
         self.search_query = ""
         self.preview_callback = None
         self._hover_preview_id = None
         self._hover_preview_path = None
         self.sort_field     = settings_manager.get('sort_field', 'name')
         self.sort_direction = settings_manager.get('sort_direction', 'asc')
+
+        self._pending_single_select_tree = None
+        self._pending_single_select_iconview = None
 
         self.store = Gtk.ListStore(GdkPixbuf.Pixbuf, str, str, str, str, bool)
         self.stack = Gtk.Stack()
@@ -68,6 +73,7 @@ class FileView(Gtk.Box):
         self.tree.set_enable_search(True)
         self.tree.connect('row-activated', self._on_row_activated_tree)
         self.tree.connect('button-press-event', self._on_button_press)
+        self.tree.connect('button-release-event', self._on_button_release_tree)
         self.tree.connect('key-press-event', self._on_key_press)
         self.tree.add_events(Gdk.EventMask.POINTER_MOTION_MASK)
         self.tree.connect('motion-notify-event', self._on_motion_preview_tree)
@@ -107,6 +113,7 @@ class FileView(Gtk.Box):
         self.icon_view.set_activate_on_single_click(self.single_click)
         self.icon_view.connect('item-activated', self._on_row_activated_icon)
         self.icon_view.connect('button-press-event', self._on_button_press_icon)
+        self.icon_view.connect('button-release-event', self._on_button_release_icon)
         self.icon_view.connect('key-press-event', self._on_key_press)
         self.icon_view.add_events(Gdk.EventMask.POINTER_MOTION_MASK)
         self.icon_view.connect('motion-notify-event', self._on_motion_preview_icon)
@@ -375,6 +382,8 @@ class FileView(Gtk.Box):
         return uris
 
     def _on_drag_begin(self, widget, drag_context):
+        self._pending_single_select_tree = None
+        self._pending_single_select_iconview = None
         try:
             paths = self.selected_paths()
             if not paths:
@@ -410,9 +419,27 @@ class FileView(Gtk.Box):
         col = Gtk.TreeViewColumn(tr('name'), renderer, text=self.COL_NAME)
         col.set_expand(True)
         col.set_resizable(True)
+        col.set_cell_data_func(renderer, self._folder_name_cell_data_func)
         self.tree.append_column(col)
         self.tree.append_column(Gtk.TreeViewColumn(tr('size'), Gtk.CellRendererText(), text=self.COL_SIZE))
         self.tree.append_column(Gtk.TreeViewColumn(tr('modified'), Gtk.CellRendererText(), text=self.COL_MODIFIED))
+
+    def _folder_name_cell_data_func(self, _column, cell, model, treeiter, _data):
+        """Renderiza nombres de carpetas con énfasis visual.
+
+        Una carpeta no seleccionada se ve con peso bold y color verde
+        Essora suave. Cuando está seleccionada GTK ya aplica los colores
+        del tema (selection bg/fg), así que solo conservamos el bold.
+        Los archivos quedan con estilo normal.
+        """
+        is_dir = model.get_value(treeiter, self.COL_IS_DIR)
+        if is_dir:
+            cell.set_property('weight', Pango.Weight.BOLD)
+            cell.set_property('foreground', '#7AA15B')
+            cell.set_property('foreground-set', True)
+        else:
+            cell.set_property('weight', Pango.Weight.NORMAL)
+            cell.set_property('foreground-set', False)
 
     def apply_preferences(self):
         """Aplica todas las preferencias respetando el modo de vista actual."""
@@ -633,18 +660,63 @@ class FileView(Gtk.Box):
                 return None
         return None
 
-    def _on_button_press_icon(self, _widget, event):
+    def _on_button_press_icon(self, widget, event):
         if event.button == 3:
             hit = self._pick_clicked_path(event)
             self.show_context_menu(event, clicked_hit=hit)
             return True
+        if event.button == 1 and event.type == Gdk.EventType.BUTTON_PRESS:
+            ctrl_or_shift = bool(event.state & (Gdk.ModifierType.CONTROL_MASK
+                                                | Gdk.ModifierType.SHIFT_MASK))
+            if not ctrl_or_shift:
+                tree_path = widget.get_path_at_pos(int(event.x), int(event.y))
+                if tree_path is not None:
+                    if widget.path_is_selected(tree_path):
+                        self._pending_single_select_iconview = tree_path
+                        return True  
+
+        self._pending_single_select_iconview = None
         return False
 
-    def _on_button_press(self, _widget, event):
+    def _on_button_release_icon(self, widget, event):
+        pending = getattr(self, '_pending_single_select_iconview', None)
+        if pending is not None and event.button == 1:
+            self._pending_single_select_iconview = None
+            widget.unselect_all()
+            widget.select_path(pending)
+        return False
+
+    def _on_button_press(self, widget, event):
         if event.button == 3:
             hit = self._pick_clicked_path(event)
             self.show_context_menu(event, clicked_hit=hit)
             return True
+
+        if event.button == 1 and event.type == Gdk.EventType.BUTTON_PRESS:
+            ctrl_or_shift = bool(event.state & (Gdk.ModifierType.CONTROL_MASK
+                                                | Gdk.ModifierType.SHIFT_MASK))
+            if not ctrl_or_shift:
+                pos = widget.get_path_at_pos(int(event.x), int(event.y))
+                if pos is not None:
+                    tree_path = pos[0]
+                    selection = widget.get_selection()
+
+                    if event.type == Gdk.EventType._2BUTTON_PRESS:
+                        return False
+
+                    if selection.path_is_selected(tree_path):
+                        self._pending_single_select_tree = tree_path
+                        return False
+        self._pending_single_select_tree = None
+        return False
+
+    def _on_button_release_tree(self, widget, event):
+        pending = getattr(self, '_pending_single_select_tree', None)
+        if pending is not None and event.button == 1:
+            self._pending_single_select_tree = None
+            selection = widget.get_selection()
+            selection.unselect_all()
+            selection.select_path(pending)
         return False
 
     def _on_key_press(self, _widget, event):
@@ -653,8 +725,18 @@ class FileView(Gtk.Box):
         if ctrl and event.keyval in (Gdk.KEY_c, Gdk.KEY_C):
             self._copy_selected()
             return True
+        if ctrl and event.keyval in (Gdk.KEY_x, Gdk.KEY_X):
+            sel = self.selected_paths()
+            if sel:
+                self._cut_paths(sel)
+            return True
         if ctrl and event.keyval in (Gdk.KEY_v, Gdk.KEY_V):
             self.paste_into_current()
+            return True
+        if ctrl and event.keyval in (Gdk.KEY_d, Gdk.KEY_D):
+            sel = self.selected_paths()
+            if sel:
+                self._duplicate_selected(sel)
             return True
         if ctrl and event.keyval in (Gdk.KEY_h, Gdk.KEY_H):
             self.toggle_hidden()
@@ -674,7 +756,34 @@ class FileView(Gtk.Box):
         if not self.clipboard_paths:
             self.show_message(tr('no_copied_files'))
             return
-        dlg = CopyProgressDialog(self.get_toplevel(), self.clipboard_paths, self.current_path, self._after_copy)
+        is_cut = self.clipboard_is_cut
+        sources_for_cut = list(self.clipboard_paths) if is_cut else []
+
+        def _on_done(ok, error_text):
+            if ok and is_cut:
+                import shutil
+                from core.privilege import is_permission_error, run_privileged
+                failed = []
+                for src in sources_for_cut:
+                    try:
+                        if os.path.isdir(src) and not os.path.islink(src):
+                            shutil.rmtree(src)
+                        else:
+                            os.remove(src)
+                    except Exception as exc:
+                        if is_permission_error(exc):
+                            failed.append(src)
+                if failed:
+                    try:
+                        run_privileged(['/bin/rm', '-rf', '--'] + failed)
+                    except Exception:
+                        pass
+                self.clipboard_paths = []
+                self.clipboard_is_cut = False
+                self._notify_clipboard_changed()
+            self._after_copy(ok, error_text)
+
+        dlg = CopyProgressDialog(self.get_toplevel(), self.clipboard_paths, self.current_path, _on_done)
         dlg.present()
 
     def _after_copy(self, ok, error_text):
@@ -732,6 +841,179 @@ class FileView(Gtk.Box):
             self.refresh()
         except Exception as exc:
             self.show_message(str(exc))
+
+    def _templates_directories(self):
+        """Devuelve la lista de directorios donde buscar templates,
+        en orden de prioridad: el del usuario primero (puede sobreescribir
+        los del sistema), luego el del paquete.
+
+        Estilo ROX-Filer: el usuario puede crear su propio
+        ~/.config/essorafm/Templates/ y los archivos ahí prevalecen sobre
+        los del sistema (mismo nombre)."""
+        return [
+            os.path.join(os.path.expanduser('~'), '.config', 'essorafm', 'Templates'),
+            '/usr/local/essorafm/Templates',
+        ]
+
+    def _build_templates_submenu(self):
+        """Construye un Gtk.Menu con un item por cada archivo de template
+        encontrado. Devuelve None si no hay templates en ningún lado."""
+        seen = set()
+        entries = []  
+        for tdir in self._templates_directories():
+            if not os.path.isdir(tdir):
+                continue
+            try:
+                names = sorted(os.listdir(tdir))
+            except OSError:
+                continue
+            for name in names:
+                if name.startswith('.'):
+                    continue
+                if name in seen:
+                    continue
+                full = os.path.join(tdir, name)
+                if not os.path.isfile(full):
+                    continue
+                seen.add(name)
+                entries.append((name, full))
+
+        if not entries:
+            return None
+
+        submenu = Gtk.Menu()
+
+        edit_item = Gtk.MenuItem(label=tr('new_file_edit_templates'))
+        edit_item.connect('activate', lambda *_: self._open_templates_folder())
+        submenu.append(edit_item)
+        submenu.append(Gtk.SeparatorMenuItem())
+
+        for display_name, template_path in entries:
+            item = Gtk.MenuItem(label=display_name)
+            item.connect('activate',
+                         lambda _w, tp=template_path: self._create_from_template(tp))
+            submenu.append(item)
+
+        submenu.show_all()
+        return submenu
+
+    def _open_templates_folder(self):
+        """Abre la carpeta de Templates del usuario en una pestaña nueva.
+        Si no existe la crea (vacía) — así el usuario puede empezar a
+        poner sus propios templates sin tener que crearla a mano."""
+        user_dir = os.path.join(os.path.expanduser('~'),
+                                '.config', 'essorafm', 'Templates')
+        try:
+            os.makedirs(user_dir, exist_ok=True)
+        except OSError as exc:
+            self.show_message(str(exc))
+            return
+        toplevel = self.get_toplevel()
+        if hasattr(toplevel, 'add_tab'):
+            toplevel.add_tab(user_dir)
+        elif hasattr(toplevel, 'open_path'):
+            toplevel.open_path(user_dir)
+        else:
+            self.load_path(user_dir)
+
+    def _create_from_template(self, template_path):
+        """Copia un archivo template al directorio actual y le muestra al
+        usuario un diálogo para cambiarle el nombre antes de confirmar.
+
+        Si ya existe un archivo con ese nombre, agrega ' (copia)',
+        ' (copia 2)', etc.
+        """
+        if self.is_trash_view():
+            return
+        if not template_path or not os.path.isfile(template_path):
+            self.show_message(tr('new_file_error_no_template'))
+            return
+
+        base_name = os.path.basename(template_path)
+        suggested = self._unique_filename_in(self.current_path, base_name)
+
+        dialog = Gtk.Dialog(title=tr('new_file_title'),
+                            transient_for=self.get_toplevel(), modal=True)
+        dialog.add_buttons(tr('cancel'), Gtk.ResponseType.CANCEL,
+                           tr('create'), Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.set_default_size(420, 0)
+
+        content = dialog.get_content_area()
+        content.set_spacing(8)
+        content.set_margin_start(16)
+        content.set_margin_end(16)
+        content.set_margin_top(12)
+        content.set_margin_bottom(12)
+
+        label = Gtk.Label(label=tr('new_file_prompt'), xalign=0)
+        content.pack_start(label, False, False, 0)
+
+        entry = Gtk.Entry()
+        entry.set_text(suggested)
+        entry.set_activates_default(True)
+        stem, _ext = os.path.splitext(suggested)
+        entry.select_region(0, len(stem))
+        content.pack_start(entry, False, False, 0)
+
+        content.show_all()
+        resp = dialog.run()
+        new_name = entry.get_text().strip()
+        dialog.destroy()
+        if resp != Gtk.ResponseType.OK or not new_name:
+            return
+
+        dest = os.path.join(self.current_path, new_name)
+
+        if os.path.exists(dest):
+            self.show_message(tr('new_file_exists').format(name=new_name))
+            return
+
+        try:
+            import shutil
+            shutil.copy2(template_path, dest)
+
+            try:
+                src_mode = os.stat(template_path).st_mode
+                os.chmod(dest, src_mode)
+            except OSError:
+                pass
+            self.refresh()
+
+            self._select_path_after_refresh(dest)
+            self.show_message(tr('new_file_created').format(name=new_name))
+        except Exception as exc:
+            self.show_message(str(exc))
+
+    def _unique_filename_in(self, directory, base_name):
+        """Devuelve un nombre que no choque con nada existente en
+        `directory`. Si base_name ya existe, agrega ' (2)', ' (3)', etc.
+        antes de la extensión.
+        """
+        candidate = os.path.join(directory, base_name)
+        if not os.path.exists(candidate):
+            return base_name
+        stem, ext = os.path.splitext(base_name)
+        i = 2
+        while True:
+            attempt = f'{stem} ({i}){ext}'
+            if not os.path.exists(os.path.join(directory, attempt)):
+                return attempt
+            i += 1
+
+    def _select_path_after_refresh(self, path):
+        """Selecciona en la vista el archivo recién creado. No es crítico
+        si falla — solo mejora la UX."""
+        try:
+            target_name = os.path.basename(path)
+            for row in self.store:
+                if row[1] == target_name:
+                    sel = self.tree.get_selection() if hasattr(self, 'tree') else None
+                    if sel is not None:
+                        sel.select_iter(row.iter)
+                    break
+        except Exception:
+            pass
 
     def restore_selected(self):
         selected = self.selected_paths()
@@ -895,6 +1177,22 @@ class FileView(Gtk.Box):
             copy_item.connect('activate', lambda *_: self._copy_paths(selected))
             menu.append(copy_item)
 
+            if not in_trash:
+                cut_item = self._make_menu_item(tr('cut'), 'edit-cut')
+                cut_item.connect('activate', lambda *_: self._cut_paths(selected))
+                menu.append(cut_item)
+
+            if not in_trash:
+                dup_item = self._make_menu_item(tr('duplicate'), ('edit-copy', 'edit-copy-symbolic'))
+                dup_item.connect('activate', lambda *_: self._duplicate_selected(selected))
+                menu.append(dup_item)
+
+            if not in_trash:
+                link_item = self._make_menu_item(tr('create_link'),
+                    ('emblem-symbolic-link', 'insert-link', 'edit-redo'))
+                link_item.connect('activate', lambda *_: self._create_symlink_dialog(selected))
+                menu.append(link_item)
+
             if in_trash:
                 restore_item = self._make_menu_item(tr('restore'), 'edit-undo')
                 restore_item.connect('activate', lambda *_: self.restore_selected())
@@ -922,6 +1220,15 @@ class FileView(Gtk.Box):
         new_folder_item.connect('activate', lambda *_: self.create_folder_dialog())
         new_folder_item.set_sensitive(not in_trash)
         menu.append(new_folder_item)
+
+        new_file_item = self._make_menu_item(tr('new_file'), ('document-new', 'text-x-generic'))
+        new_file_item.set_sensitive(not in_trash)
+        templates_submenu = self._build_templates_submenu()
+        if templates_submenu is not None:
+            new_file_item.set_submenu(templates_submenu)
+        else:
+            new_file_item.set_sensitive(False)
+        menu.append(new_file_item)
 
         duplicates_item = self._make_menu_item(tr('duplicate_scanner'), ('edit-find', 'system-search'))
         duplicates_item.connect('activate', lambda *_: self.open_duplicate_scanner())
@@ -954,7 +1261,257 @@ class FileView(Gtk.Box):
 
     def _copy_paths(self, paths):
         self.clipboard_paths = list(paths)
+        self.clipboard_is_cut = False
         self.show_message(f"{len(self.clipboard_paths)} {tr('copied_items')}")
+        self._notify_clipboard_changed()
+
+    def _cut_paths(self, paths):
+        """Marca los archivos como "cortados" — al pegar se moverán en
+        lugar de copiarse. Comportamiento estándar de cualquier file
+        manager moderno (igual que Ctrl+X en Nautilus/Thunar/Dolphin)."""
+        self.clipboard_paths = list(paths)
+        self.clipboard_is_cut = True
+        self.show_message(f"{len(self.clipboard_paths)} {tr('cut_items')}")
+        self._notify_clipboard_changed()
+
+    def _notify_clipboard_changed(self):
+        """Avisa a la window que el clipboard cambió, para que sincronice
+        el estado del botón "Pegar" de la toolbar."""
+        try:
+            toplevel = self.get_toplevel()
+            if toplevel and hasattr(toplevel, 'sync_paste_button'):
+                toplevel.sync_paste_button()
+        except Exception:
+            pass
+
+    def _duplicate_selected(self, paths):
+        """Duplica los archivos/carpetas seleccionados.
+
+        Si es UNO solo, muestra un diálogo con la ruta destino pre-llena
+        y editable (estilo ROX), así el usuario puede cambiar dónde y
+        con qué nombre. Si son varios, los duplica con sufijo automático
+        " (copia)", " (copia 2)", etc. sin diálogo.
+        """
+        if not paths:
+            return
+        if len(paths) == 1:
+            self._duplicate_with_dialog(paths[0])
+        else:
+            self._duplicate_batch(paths)
+
+    def _duplicate_with_dialog(self, source_path):
+        """Diálogo de duplicación con ruta editable (estilo ROX)."""
+        import shutil
+        parent = os.path.dirname(source_path)
+        base = os.path.basename(source_path)
+        stem, ext = os.path.splitext(base)
+        suggested = self._unique_dup_path(parent, stem, ext)
+
+        dialog = Gtk.Dialog(title=tr('duplicate'),
+                            transient_for=self.get_toplevel(),
+                            modal=True)
+        dialog.add_buttons(tr('cancel'), Gtk.ResponseType.CANCEL,
+                           tr('duplicate'), Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.set_default_size(560, 0)
+
+        content = dialog.get_content_area()
+        content.set_spacing(8)
+        content.set_margin_start(16)
+        content.set_margin_end(16)
+        content.set_margin_top(12)
+        content.set_margin_bottom(12)
+        icon_name = 'folder' if os.path.isdir(source_path) else 'text-x-generic'
+        icon_img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DIALOG)
+        icon_img.set_halign(Gtk.Align.CENTER)
+        content.pack_start(icon_img, False, False, 0)
+
+        entry = Gtk.Entry()
+        entry.set_text(suggested)
+        entry.set_activates_default(True)
+        dirname = os.path.dirname(suggested)
+        basename_full = os.path.basename(suggested)
+        stem_sel, _ext_sel = os.path.splitext(basename_full)
+        prefix_len = len(dirname) + 1  # +1 por la /
+        entry.select_region(prefix_len, prefix_len + len(stem_sel))
+        content.pack_start(entry, False, False, 0)
+
+        content.show_all()
+        resp = dialog.run()
+        new_path = entry.get_text().strip()
+        dialog.destroy()
+        if resp != Gtk.ResponseType.OK or not new_path:
+            return
+        if new_path == source_path:
+            return
+        if os.path.exists(new_path):
+            self.show_message(tr('duplicate_exists').format(name=os.path.basename(new_path)))
+            return
+        try:
+            new_parent = os.path.dirname(new_path)
+            if new_parent and not os.path.exists(new_parent):
+                os.makedirs(new_parent, exist_ok=True)
+            if os.path.isdir(source_path):
+                shutil.copytree(source_path, new_path)
+            else:
+                shutil.copy2(source_path, new_path)
+            self.refresh()
+            self.show_message(tr('duplicated').format(name=os.path.basename(new_path)))
+        except PermissionError:
+            try:
+                from core.privilege import cp_privileged
+                cp_privileged([source_path], new_path)
+                self.refresh()
+                self.show_message(tr('duplicated').format(name=os.path.basename(new_path)))
+            except Exception as exc:
+                self.show_message(str(exc))
+        except Exception as exc:
+            self.show_message(str(exc))
+
+    def _duplicate_batch(self, paths):
+        """Duplica múltiples archivos sin diálogo, agregando sufijo
+        automático para evitar conflictos."""
+        import shutil
+        n_done = 0
+        for src in paths:
+            parent = os.path.dirname(src)
+            base = os.path.basename(src)
+            stem, ext = os.path.splitext(base)
+            dst = self._unique_dup_path(parent, stem, ext)
+            try:
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copy2(src, dst)
+                n_done += 1
+            except PermissionError:
+                try:
+                    from core.privilege import cp_privileged
+                    cp_privileged([src], dst)
+                    n_done += 1
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        if n_done > 0:
+            self.refresh()
+            self.show_message(tr('duplicated_n').format(n=n_done))
+        else:
+            self.show_message(tr('copy_fail'))
+
+    def _unique_dup_path(self, parent, stem, ext):
+        """Devuelve un path único en `parent` para 'stem (copia)ext',
+        agregando ' 2', ' 3' si ya existe."""
+        attempt = os.path.join(parent, f'{stem} ({tr("dup_suffix")}){ext}')
+        if not os.path.exists(attempt):
+            return attempt
+        i = 2
+        while True:
+            attempt = os.path.join(parent, f'{stem} ({tr("dup_suffix")} {i}){ext}')
+            if not os.path.exists(attempt):
+                return attempt
+            i += 1
+
+    def _create_symlink_dialog(self, paths):
+        """Diálogo "Crear enlace" estilo ROX: si es un solo archivo,
+        muestra un diálogo con el path destino editable + checkbox de
+        "Enlace relativo". Si son varios, crea los enlaces en la misma
+        carpeta con sufijo " (enlace)" sin diálogo."""
+        if not paths:
+            return
+        if len(paths) == 1:
+            self._symlink_with_dialog(paths[0])
+        else:
+            self._symlink_batch(paths)
+
+    def _symlink_with_dialog(self, source_path):
+        parent = os.path.dirname(source_path)
+        base = os.path.basename(source_path)
+        suggested_path = os.path.join(parent, base)
+        if os.path.exists(suggested_path) and suggested_path == source_path:
+            stem, ext = os.path.splitext(base)
+            suggested_path = os.path.join(parent, f'{stem} ({tr("link_suffix")}){ext}')
+
+        dialog = Gtk.Dialog(title=tr('create_link'),
+                            transient_for=self.get_toplevel(),
+                            modal=True)
+        dialog.add_buttons(tr('cancel'), Gtk.ResponseType.CANCEL,
+                           tr('create_link'), Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.set_default_size(560, 0)
+
+        content = dialog.get_content_area()
+        content.set_spacing(8)
+        content.set_margin_start(16)
+        content.set_margin_end(16)
+        content.set_margin_top(12)
+        content.set_margin_bottom(12)
+
+        icon_name = 'folder' if os.path.isdir(source_path) else 'text-x-generic'
+        icon_img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DIALOG)
+        icon_img.set_halign(Gtk.Align.CENTER)
+        content.pack_start(icon_img, False, False, 0)
+
+        entry = Gtk.Entry()
+        entry.set_text(suggested_path)
+        entry.set_activates_default(True)
+        content.pack_start(entry, False, False, 0)
+
+        relative_check = Gtk.CheckButton(label=tr('relative_link'))
+        relative_check.set_active(True)
+        content.pack_start(relative_check, False, False, 0)
+
+        content.show_all()
+        resp = dialog.run()
+        link_path = entry.get_text().strip()
+        relative = relative_check.get_active()
+        dialog.destroy()
+        if resp != Gtk.ResponseType.OK or not link_path:
+            return
+        if link_path == source_path:
+            return
+        try:
+            self._make_symlink(source_path, link_path, relative)
+            self.refresh()
+            self.show_message(tr('link_created').format(name=os.path.basename(link_path)))
+        except Exception as exc:
+            self.show_message(str(exc))
+
+    def _symlink_batch(self, paths):
+        """Crea enlaces para múltiples archivos en la misma carpeta."""
+        n_done = 0
+        for src in paths:
+            parent = os.path.dirname(src)
+            base = os.path.basename(src)
+            stem, ext = os.path.splitext(base)
+            target = os.path.join(parent, f'{stem} ({tr("link_suffix")}){ext}')
+            i = 2
+            while os.path.exists(target):
+                target = os.path.join(parent, f'{stem} ({tr("link_suffix")} {i}){ext}')
+                i += 1
+            try:
+                self._make_symlink(src, target, relative=True)
+                n_done += 1
+            except Exception:
+                pass
+        if n_done > 0:
+            self.refresh()
+            self.show_message(tr('links_created_n').format(n=n_done))
+
+    def _make_symlink(self, source, link_path, relative):
+        """Crea el enlace simbólico. Si relative=True, calcula la ruta
+        relativa desde el directorio del enlace al source."""
+        link_dir = os.path.dirname(link_path)
+        if relative:
+            target = os.path.relpath(source, link_dir)
+        else:
+            target = os.path.abspath(source)
+        try:
+            os.symlink(target, link_path)
+        except PermissionError:
+            from core.privilege import run_privileged
+            run_privileged(['/bin/ln', '-s', '--', target, link_path])
+
 
     def _delete_paths(self, paths, permanent=False):
         if not paths:
@@ -991,7 +1548,9 @@ class FileView(Gtk.Box):
 
     def _copy_selected(self):
         self.clipboard_paths = self.selected_paths()
+        self.clipboard_is_cut = False
         self.show_message(f"{len(self.clipboard_paths)} {tr('copied_items')}")
+        self._notify_clipboard_changed()
 
     def _is_image(self, path):
         try:
