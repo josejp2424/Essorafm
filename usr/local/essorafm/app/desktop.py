@@ -23,6 +23,11 @@ from services.volumes import VolumeService
 from services.icon_loader import IconLoader
 from core.desktop_settings import DesktopDriveSettings, DESKTOP_DRIVES_CONFIG, DESKTOP_DRIVES_COMPAT_CONFIG
 from core.settings import CONFIG_DIR
+
+try:
+    from core.compositor import EssoraCompositor
+except Exception:
+    EssoraCompositor = None
 from core.i18n import tr
 from core.xdg import xdg_dir, XDG
 from app.wallpaper_carousel import WallpaperCarouselDialog
@@ -945,6 +950,10 @@ class EssoraDesktop(Gtk.Window):
         self._configure_desktop_window()
         self._apply_css()
 
+        self.compositor = EssoraCompositor(self.desktop_settings) if EssoraCompositor else None
+        if self.compositor is not None:
+            GLib.idle_add(self.compositor.start)
+
         for signal_name in (
             'mount-added', 'mount-removed', 'mount-changed', 'mount-pre-unmount',
             'volume-added', 'volume-removed', 'volume-changed',
@@ -1022,6 +1031,11 @@ class EssoraDesktop(Gtk.Window):
         return False
 
     def _on_destroy(self, *_args):
+        try:
+            if getattr(self, 'compositor', None) is not None:
+                self.compositor.stop()
+        except Exception:
+            pass
         Gtk.main_quit()
 
     def _configure_desktop_window(self):
@@ -1671,6 +1685,17 @@ class EssoraDesktop(Gtk.Window):
             _clear_icon_positions()
         self.refresh()
 
+
+    def launch_essora_picom_gui(self):
+        gui = '/usr/local/essorafm/bin/essora-picom-gui.sh'
+        if not os.path.exists(gui):
+            self._error(f"{tr('essora_picom_gui_missing')}: {gui}")
+            return
+        try:
+            subprocess.Popen([gui], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        except Exception as exc:
+            self._error(f"{tr('essora_picom_gui_error')}: {exc}")
+
     def popup_desktop_menu(self, event=None):
         menu = Gtk.Menu()
         applications = Gtk.MenuItem(label=tr('applications'))
@@ -1680,6 +1705,11 @@ class EssoraDesktop(Gtk.Window):
         change_wallpaper = Gtk.MenuItem(label=tr('change_wallpaper'))
         change_wallpaper.connect('activate', lambda *_: self.choose_wallpaper())
         menu.append(change_wallpaper)
+
+        essora_picom_item = Gtk.MenuItem(label=tr('configure_essora_picom'))
+        essora_picom_item.connect('activate', lambda *_: self.launch_essora_picom_gui())
+        menu.append(essora_picom_item)
+
         add_icon = Gtk.MenuItem(label=tr('add_app_or_icon'))
         add_icon.connect('activate', lambda *_: self.add_icon_to_desktop())
         menu.append(add_icon)

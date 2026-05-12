@@ -2106,3 +2106,74 @@ try:
             STRINGS[_lang].setdefault(_k, _v)
 except Exception:
     pass
+
+
+ESSORA_PICOM_DESKTOP_MENU_STRINGS = {
+    'en': {
+        'configure_essora_picom': 'Configure Essora Picom',
+        'essora_picom_gui_missing': 'Essora Picom GUI was not found',
+        'essora_picom_gui_error': 'Could not open Essora Picom GUI',
+    },
+    'es': {
+        'configure_essora_picom': 'Configurar Essora Picom',
+        'essora_picom_gui_missing': 'No se encontró la GUI de Essora Picom',
+        'essora_picom_gui_error': 'No se pudo abrir la GUI de Essora Picom',
+    },
+    'ca': {
+        'configure_essora_picom': 'Configura Essora Picom',
+        'essora_picom_gui_missing': 'No s\'ha trobat la GUI d\'Essora Picom',
+        'essora_picom_gui_error': 'No s\'ha pogut obrir la GUI d\'Essora Picom',
+    },
+    'de': {
+        'configure_essora_picom': 'Essora Picom konfigurieren',
+        'essora_picom_gui_missing': 'Essora Picom GUI wurde nicht gefunden',
+        'essora_picom_gui_error': 'Essora Picom GUI konnte nicht geöffnet werden',
+    },
+    'fr': {
+        'configure_essora_picom': 'Configurer Essora Picom',
+        'essora_picom_gui_missing': 'L\'interface Essora Picom est introuvable',
+        'essora_picom_gui_error': 'Impossible d\'ouvrir l\'interface Essora Picom',
+    },
+    'it': {
+        'configure_essora_picom': 'Configura Essora Picom',
+        'essora_picom_gui_missing': 'GUI di Essora Picom non trovata',
+        'essora_picom_gui_error': 'Impossibile aprire la GUI di Essora Picom',
+    },
+    'pt': {
+        'configure_essora_picom': 'Configurar Essora Picom',
+        'essora_picom_gui_missing': 'A GUI do Essora Picom não foi encontrada',
+        'essora_picom_gui_error': 'Não foi possível abrir a GUI do Essora Picom',
+    },
+    'hu': {
+        'configure_essora_picom': 'Essora Picom beállítása',
+        'essora_picom_gui_missing': 'Az Essora Picom felület nem található',
+        'essora_picom_gui_error': 'Az Essora Picom felület nem nyitható meg',
+    },
+    'ja': {
+        'configure_essora_picom': 'Essora Picom を設定',
+        'essora_picom_gui_missing': 'Essora Picom GUI が見つかりません',
+        'essora_picom_gui_error': 'Essora Picom GUI を開けません',
+    },
+    'ru': {
+        'configure_essora_picom': 'Настроить Essora Picom',
+        'essora_picom_gui_missing': 'GUI Essora Picom не найден',
+        'essora_picom_gui_error': 'Не удалось открыть GUI Essora Picom',
+    },
+    'zh': {
+        'configure_essora_picom': '配置 Essora Picom',
+        'essora_picom_gui_missing': '找不到 Essora Picom 图形界面',
+        'essora_picom_gui_error': '无法打开 Essora Picom 图形界面',
+    },
+    'ar': {
+        'configure_essora_picom': 'إعداد Essora Picom',
+        'essora_picom_gui_missing': 'لم يتم العثور على واجهة Essora Picom',
+        'essora_picom_gui_error': 'تعذر فتح واجهة Essora Picom',
+    },
+}
+try:
+    for _lang, _vals in ESSORA_PICOM_DESKTOP_MENU_STRINGS.items():
+        STRINGS.setdefault(_lang, {}).update(_vals)
+        for _k, _v in ESSORA_PICOM_DESKTOP_MENU_STRINGS['en'].items():
+            STRINGS[_lang].setdefault(_k, _v)
+except Exception:
+    pass

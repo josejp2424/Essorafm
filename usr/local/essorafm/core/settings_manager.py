@@ -78,6 +78,10 @@ class SettingsManager:
         'DrawShadow': 'true',
         'FontColor': '#ffffffffffff',
         'ShadowColor': '#000000000000',
+        'CompositorEnabled': 'true',
+        'CompositorBinary': '/usr/local/essorafm/bin/essorafm-picom',
+        'CompositorConfig': '~/.config/essorafm/essorafm-picom.conf',
+        'CompositorStopWithDesktop': 'true',
     }
 
     LEGACY_MAP = {

@@ -1,0 +1,8 @@
+prefix=/usr/local/essorafm
+includedir=${prefix}/include
+
+Name: picom-api
+Description: picom API headers
+Version: 13-essora
+Requires: pixman-1, xcb
+Cflags: -I${includedir}/picom
