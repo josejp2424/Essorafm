@@ -1,6 +1,6 @@
 #!/bin/bash
 # Autor: josejp2424
-# VERSIÓN 0.2
+# VERSIÓN 0.3
 # Licencia: GNU General Public License v2.0
 #
 # Este programa es software libre; puede redistribuirlo y/o modificarlo
@@ -56,12 +56,12 @@ set_language_strings() {
             BTN_START_PICOM="Iniciar Picom"
             BTN_STOP_PICOM="Detener Picom"
             START_PICOM_TITLE="Picom Iniciado"
-            START_PICOM_TEXT="Picom iniciado correctamente.\nAutostart habilitado en:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom iniciado correctamente.\nHabilitado en:\n$CONFIG_INI"
             START_PICOM_ERROR="Error al iniciar Picom."
             STOP_PICOM_TITLE="Picom Detenido"
-            STOP_PICOM_SUCCESS="Picom detenido.\nAutostart eliminado."
+            STOP_PICOM_SUCCESS="Picom detenido.\nDeshabilitado en la configuración."
             STOP_PICOM_ERROR="Error al detener Picom."
-            STOP_PICOM_NOT_RUNNING="Picom no está en ejecución.\nAutostart eliminado (si existía)."
+            STOP_PICOM_NOT_RUNNING="Picom no está en ejecución.\nDeshabilitado en la configuración."
             SUCCESS_TITLE="Configuración Exitosa"
             SUCCESS_TEXT="Configuración generada correctamente en:\n$CONFIG_FILE"
             ERROR_TITLE="Error"
@@ -140,12 +140,12 @@ set_language_strings() {
             BTN_START_PICOM="Запустить Picom"
             BTN_STOP_PICOM="Остановить Picom"
             START_PICOM_TITLE="Picom Запущен"
-            START_PICOM_TEXT="Picom успешно запущен.\nАвтозапуск включён:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom успешно запущен.\nВключено в:\n$CONFIG_INI"
             START_PICOM_ERROR="Ошибка запуска Picom."
             STOP_PICOM_TITLE="Picom Остановлен"
-            STOP_PICOM_SUCCESS="Picom остановлен.\nАвтозапуск удалён."
+            STOP_PICOM_SUCCESS="Picom остановлен.\nОтключено в конфигурации."
             STOP_PICOM_ERROR="Ошибка остановки Picom."
-            STOP_PICOM_NOT_RUNNING="Picom не запущен.\nАвтозапуск удалён (если существовал)."
+            STOP_PICOM_NOT_RUNNING="Picom не запущен.\nОтключено в конфигурации."
             SUCCESS_TITLE="Конфигурация Успешно Создана"
             SUCCESS_TEXT="Конфигурация успешно создана в:\n$CONFIG_FILE"
             ERROR_TITLE="Ошибка"
@@ -224,12 +224,12 @@ set_language_strings() {
             BTN_START_PICOM="تشغيل Picom"
             BTN_STOP_PICOM="إيقاف Picom"
             START_PICOM_TITLE="تم تشغيل Picom"
-            START_PICOM_TEXT="تم تشغيل Picom بنجاح.\nتم تفعيل البدء التلقائي:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="تم تشغيل Picom بنجاح.\nتم التفعيل في:\n$CONFIG_INI"
             START_PICOM_ERROR="خطأ في تشغيل Picom."
             STOP_PICOM_TITLE="تم إيقاف Picom"
-            STOP_PICOM_SUCCESS="تم إيقاف Picom.\nتم حذف البدء التلقائي."
+            STOP_PICOM_SUCCESS="تم إيقاف Picom.\nتم تعطيله في الإعدادات."
             STOP_PICOM_ERROR="خطأ في إيقاف Picom."
-            STOP_PICOM_NOT_RUNNING="Picom غير قيد التشغيل.\nتم حذف البدء التلقائي (إن وجد)."
+            STOP_PICOM_NOT_RUNNING="Picom غير قيد التشغيل.\nتم تعطيله في الإعدادات."
             SUCCESS_TITLE="تم إنشاء الإعدادات بنجاح"
             SUCCESS_TEXT="تم إنشاء الإعدادات بنجاح في:\n$CONFIG_FILE"
             ERROR_TITLE="خطأ"
@@ -308,12 +308,12 @@ set_language_strings() {
             BTN_START_PICOM="Avvia Picom"
             BTN_STOP_PICOM="Ferma Picom"
             START_PICOM_TITLE="Picom Avviato"
-            START_PICOM_TEXT="Picom avviato con successo.\nAutostart abilitato in:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom avviato con successo.\nAbilitato in:\n$CONFIG_INI"
             START_PICOM_ERROR="Errore nell'avvio di Picom."
             STOP_PICOM_TITLE="Picom Fermato"
-            STOP_PICOM_SUCCESS="Picom fermato.\nAutostart rimosso."
+            STOP_PICOM_SUCCESS="Picom fermato.\nDisabilitato nella configurazione."
             STOP_PICOM_ERROR="Errore nel fermare Picom."
-            STOP_PICOM_NOT_RUNNING="Picom non è in esecuzione.\nAutostart rimosso (se esisteva)."
+            STOP_PICOM_NOT_RUNNING="Picom non è in esecuzione.\nDisabilitato nella configurazione."
             SUCCESS_TITLE="Configurazione Riuscita"
             SUCCESS_TEXT="Configurazione generata con successo in:\n$CONFIG_FILE"
             ERROR_TITLE="Errore"
@@ -392,12 +392,12 @@ set_language_strings() {
             BTN_START_PICOM="Picom起動"
             BTN_STOP_PICOM="Picom停止"
             START_PICOM_TITLE="Picom起動済み"
-            START_PICOM_TEXT="Picomが正常に起動しました。\n自動起動が有効：\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picomが正常に起動しました。\n有効化された設定:\n$CONFIG_INI"
             START_PICOM_ERROR="Picomの起動に失敗しました。"
             STOP_PICOM_TITLE="Picom停止済み"
-            STOP_PICOM_SUCCESS="Picomを停止しました。\n自動起動を削除しました。"
+            STOP_PICOM_SUCCESS="Picomを停止しました。\n設定で無効化しました。"
             STOP_PICOM_ERROR="Picomの停止に失敗しました。"
-            STOP_PICOM_NOT_RUNNING="Picomは実行されていません。\n自動起動を削除しました（存在した場合）。"
+            STOP_PICOM_NOT_RUNNING="Picomは実行されていません。\n設定で無効化しました。"
             SUCCESS_TITLE="設定成功"
             SUCCESS_TEXT="設定が正常に生成されました:\n$CONFIG_FILE"
             ERROR_TITLE="エラー"
@@ -476,12 +476,12 @@ set_language_strings() {
             BTN_START_PICOM="Iniciar Picom"
             BTN_STOP_PICOM="Parar Picom"
             START_PICOM_TITLE="Picom Iniciado"
-            START_PICOM_TEXT="Picom iniciado com sucesso.\nAutostart habilitado em:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom iniciado com sucesso.\nAtivado em:\n$CONFIG_INI"
             START_PICOM_ERROR="Erro ao iniciar o Picom."
             STOP_PICOM_TITLE="Picom Parado"
-            STOP_PICOM_SUCCESS="Picom parado.\nAutostart removido."
+            STOP_PICOM_SUCCESS="Picom parado.\nDesativado na configuração."
             STOP_PICOM_ERROR="Erro ao parar o Picom."
-            STOP_PICOM_NOT_RUNNING="Picom não está em execução.\nAutostart removido (se existia)."
+            STOP_PICOM_NOT_RUNNING="Picom não está em execução.\nDesativado na configuração."
             SUCCESS_TITLE="Configuração Bem-sucedida"
             SUCCESS_TEXT="Configuração gerada com sucesso em:\n$CONFIG_FILE"
             ERROR_TITLE="Erro"
@@ -560,12 +560,12 @@ set_language_strings() {
             BTN_START_PICOM="Khởi động Picom"
             BTN_STOP_PICOM="Dừng Picom"
             START_PICOM_TITLE="Picom Đã Khởi Động"
-            START_PICOM_TEXT="Picom đã khởi động thành công.\nAutostart đã bật:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom đã khởi động thành công.\nĐã bật trong:\n$CONFIG_INI"
             START_PICOM_ERROR="Lỗi khi khởi động Picom."
             STOP_PICOM_TITLE="Picom Đã Dừng"
-            STOP_PICOM_SUCCESS="Picom đã dừng.\nAutostart đã xóa."
+            STOP_PICOM_SUCCESS="Picom đã dừng.\nĐã tắt trong cấu hình."
             STOP_PICOM_ERROR="Lỗi khi dừng Picom."
-            STOP_PICOM_NOT_RUNNING="Picom không chạy.\nAutostart đã xóa (nếu tồn tại)."
+            STOP_PICOM_NOT_RUNNING="Picom không chạy.\nĐã tắt trong cấu hình."
             SUCCESS_TITLE="Cấu hình Thành công"
             SUCCESS_TEXT="Đã tạo cấu hình thành công tại:\n$CONFIG_FILE"
             ERROR_TITLE="Lỗi"
@@ -644,12 +644,12 @@ set_language_strings() {
             BTN_START_PICOM="Iniciar Picom"
             BTN_STOP_PICOM="Aturar Picom"
             START_PICOM_TITLE="Picom Iniciat"
-            START_PICOM_TEXT="Picom iniciat correctament.\nAutostart habilitat a:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom iniciat correctament.\nHabilitat a:\n$CONFIG_INI"
             START_PICOM_ERROR="Error en iniciar Picom."
             STOP_PICOM_TITLE="Picom Aturat"
-            STOP_PICOM_SUCCESS="Picom aturat.\nAutostart eliminat."
+            STOP_PICOM_SUCCESS="Picom aturat.\nDeshabilitat a la configuració."
             STOP_PICOM_ERROR="Error en aturar Picom."
-            STOP_PICOM_NOT_RUNNING="Picom no està en execució.\nAutostart eliminat (si existia)."
+            STOP_PICOM_NOT_RUNNING="Picom no està en execució.\nDeshabilitat a la configuració."
             SUCCESS_TITLE="Configuració Exitosa"
             SUCCESS_TEXT="Configuració generada correctament a:\n$CONFIG_FILE"
             ERROR_TITLE="Error"
@@ -728,12 +728,12 @@ set_language_strings() {
             BTN_START_PICOM="Démarrer Picom"
             BTN_STOP_PICOM="Arrêter Picom"
             START_PICOM_TITLE="Picom Démarré"
-            START_PICOM_TEXT="Picom démarré avec succès.\nDémarrage automatique activé dans:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom démarré avec succès.\nActivé dans:\n$CONFIG_INI"
             START_PICOM_ERROR="Erreur lors du démarrage de Picom."
             STOP_PICOM_TITLE="Picom Arrêté"
-            STOP_PICOM_SUCCESS="Picom arrêté.\nDémarrage automatique supprimé."
+            STOP_PICOM_SUCCESS="Picom arrêté.\nDésactivé dans la configuration."
             STOP_PICOM_ERROR="Erreur lors de l'arrêt de Picom."
-            STOP_PICOM_NOT_RUNNING="Picom n'est pas en cours d'exécution.\nDémarrage automatique supprimé (s'il existait)."
+            STOP_PICOM_NOT_RUNNING="Picom n'est pas en cours d'exécution.\nDésactivé dans la configuration."
             SUCCESS_TITLE="Configuration Réussie"
             SUCCESS_TEXT="Configuration générée avec succès dans:\n$CONFIG_FILE"
             ERROR_TITLE="Erreur"
@@ -759,12 +759,12 @@ set_language_strings() {
             BTN_START_PICOM="Start Picom"
             BTN_STOP_PICOM="Stop Picom"
             START_PICOM_TITLE="Picom Started"
-            START_PICOM_TEXT="Picom started successfully.\nAutostart enabled at:\n/etc/xdg/autostart/picom.desktop"
+            START_PICOM_TEXT="Picom started successfully.\nEnabled in:\n$CONFIG_INI"
             START_PICOM_ERROR="Error starting Picom."
             STOP_PICOM_TITLE="Picom Stopped"
-            STOP_PICOM_SUCCESS="Picom stopped.\nAutostart removed."
+            STOP_PICOM_SUCCESS="Picom stopped.\nDisabled in the configuration."
             STOP_PICOM_ERROR="Error stopping Picom."
-            STOP_PICOM_NOT_RUNNING="Picom is not running.\nAutostart removed (if it existed)."
+            STOP_PICOM_NOT_RUNNING="Picom is not running.\nDisabled in the configuration."
             SUCCESS_TITLE="Configuration Success"
             SUCCESS_TEXT="Configuration successfully generated at:\n$CONFIG_FILE"
             ERROR_TITLE="Error"
@@ -1050,7 +1050,9 @@ combo_values() {
 get_config_value() {
     local key="$1"
     local default="$2"
-    local value=$(grep -oP "(?<=^${key}\s*=\s*)[^;]+" "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/ *$//;s/;$//')
+    local value
+    value=$(grep -E "^${key}[[:space:]]*=" "$CONFIG_FILE" 2>/dev/null | head -1 | \
+            sed -E "s/^${key}[[:space:]]*=[[:space:]]*//; s/[[:space:]]*;[[:space:]]*$//; s/^\"//; s/\"$//")
     [[ -z "$value" ]] && echo "$default" || echo "$value"
 }
 
@@ -1067,12 +1069,27 @@ get_wintype_config() {
     local wintype="$1"
     local setting="$2"
     local default="$3"
-    
-    local value=$(sed -n "/^wintypes:/,/^}/p" "$CONFIG_FILE" 2>/dev/null | \
-                 grep -A 10 "$wintype" | grep "$setting" | \
-                 awk -F'=' '{print $2}' | sed 's/[;,]//g; s/ //g')
-    
-    [[ -z "$value" ]] && echo "$default" || echo "$value"
+
+
+    local block_line
+    block_line=$(sed -n "/^wintypes:/,/^};/p" "$CONFIG_FILE" 2>/dev/null | \
+                 grep -E "^[[:space:]]*${wintype}[[:space:]]*=[[:space:]]*\{" | head -1)
+
+    if [ -z "$block_line" ]; then
+        echo "$default"
+        return
+    fi
+
+
+    local inner
+    inner=$(echo "$block_line" | sed -n 's/.*{\(.*\)}.*/\1/p')
+
+
+    local value
+    value=$(echo "$inner" | grep -oE "${setting}[[:space:]]*=[[:space:]]*[^;]+" | \
+            head -1 | sed "s/${setting}[[:space:]]*=[[:space:]]*//;s/[[:space:]]*$//;s/^[[:space:]]*//")
+
+    [ -z "$value" ] && echo "$default" || echo "$value"
 }
 
 
@@ -1097,7 +1114,7 @@ load_config() {
     INACTIVE_OPACITY=$(get_config_value "inactive-opacity" "1.0")
     ACTIVE_OPACITY=$(get_config_value "active-opacity" "1.0")
     FRAME_OPACITY=$(get_config_value "frame-opacity" "1.0")
-    OPACITY_OVERRIDE=$(get_config_value "inactive-opacity-override" "false")
+    OPACITY_OVERRIDE=$(get_config_value "inactive-opacity-override" "true")
     INACTIVE_DIM=$(get_config_value "inactive-dim" "0.0")
     FOCUS_EXCLUDE=$(get_exclude_list "focus-exclude")
     formatted_focus_exclude=$(format_list "$FOCUS_EXCLUDE")
@@ -1131,7 +1148,7 @@ load_config() {
     MARK_WMWIN_FOCUSED=$(get_config_value "mark-wmwin-focused" "true")
     MARK_OVREDIR_FOCUSED=$(get_config_value "mark-ovredir-focused" "true")
     DETECT_ROUNDED_CORNERS=$(get_config_value "detect-rounded-corners" "true")
-    DETECT_CLIENT_OPACITY=$(get_config_value "detect-client-opacity" "true")
+    DETECT_CLIENT_OPACITY=$(get_config_value "detect-client-opacity" "false")
 
     # ─────── WINTYPES ───────
     TOOLTIP_FADE=$(get_wintype_config "tooltip" "fade" "true")
@@ -1294,7 +1311,7 @@ PY
     esac
 }
 
-# Función para restaurar backup
+
 restore_backup() {
     if [ -f "$BACKUP_FILE" ]; then
         if cp "$BACKUP_FILE" "$CONFIG_FILE"; then
@@ -1333,66 +1350,62 @@ generate_picom_conf() {
 #        Autor josejp2424                                             #
 ######################################################################
 # ─────── ESQUINAS REDONDEADAS ───────
-corner-radius = 15;
+corner-radius = ${CORNER_RADIUS};
 rounded-corners-exclude = [
-  "class_g = 'Conky'",
-  "class_g = 'Plank'",
-  "class_g = 'Dunst'",
-  "window_type = 'dock'",
-  "window_type = 'desktop'"
+${formatted_rounded_exclude}
 ];
 # ─────── SOMBRAS ───────
-shadow = true;
-shadow-radius = 12;
-shadow-opacity = 1;
-shadow-offset-x = 0;
-shadow-offset-y = 0;
+shadow = ${SHADOW};
+shadow-radius = ${SHADOW_RADIUS};
+shadow-opacity = ${SHADOW_OPACITY};
+shadow-offset-x = ${SHADOW_OFFSET_X};
+shadow-offset-y = ${SHADOW_OFFSET_Y};
 shadow-exclude = [
-  "class_g = 'Plank'",
-  "class_g = 'Conky'"
+${formatted_shadow_exclude}
 ];
 # ─────── TRANSPARENCIA ───────
-inactive-opacity = 1;
-active-opacity = 1;
-frame-opacity = 1;
-inactive-opacity-override = true;
-inactive-dim = 0;
+inactive-opacity = ${INACTIVE_OPACITY};
+active-opacity = ${ACTIVE_OPACITY};
+frame-opacity = ${FRAME_OPACITY};
+inactive-opacity-override = ${OPACITY_OVERRIDE};
+inactive-dim = ${INACTIVE_DIM};
 focus-exclude = [
+${formatted_focus_exclude}
 ];
 opacity-rule = [
+${formatted_opacity_rules}
 ];
 # ─────── BLUR ───────
-blur-method = "none";
-blur-size = 10;
-blur-strength = 5;
-blur-background = false;
-blur-background-frame = false;
-blur-kern = "3x3box";
+blur-method = "${BLUR_METHOD}";
+blur-size = ${BLUR_SIZE};
+blur-strength = ${BLUR_STRENGTH};
+blur-background = ${BLUR_BACKGROUND};
+blur-background-frame = ${BLUR_BACKGROUND_FRAME};
+blur-kern = "${BLUR_KERNEL}";
 blur-background-exclude = [
-  "window_type = 'dock'",
-  "window_type = 'desktop'"
+${formatted_blur_exclude}
 ];
 # ─────── FADING ───────
-fading = true;
-fade-in-step = 0;
-fade-out-step = 0;
-fade-delta = 10;
+fading = ${FADING};
+fade-in-step = ${FADE_IN_STEP};
+fade-out-step = ${FADE_OUT_STEP};
+fade-delta = ${FADE_DELTA};
 # ─────── GENERAL ───────
-backend = "glx";
-vsync = true;
-use-damage = true;
-log-level = "warn";
-mark-wmwin-focused = true;
-mark-ovredir-focused = true;
-detect-rounded-corners = true;
-detect-client-opacity = false;
+backend = "${BACKEND}";
+vsync = ${VSYNC};
+use-damage = ${USE_DAMAGE};
+log-level = "${LOG_LEVEL}";
+mark-wmwin-focused = ${MARK_WMWIN_FOCUSED};
+mark-ovredir-focused = ${MARK_OVREDIR_FOCUSED};
+detect-rounded-corners = ${DETECT_ROUNDED_CORNERS};
+detect-client-opacity = ${DETECT_CLIENT_OPACITY};
 # ─────── WINTYPES ───────
 wintypes:
 {
-    tooltip = { fade = true; shadow = true; opacity = 1; focus = true; };
-    dock = { shadow = false; };
-    dnd = { shadow = false; };
-    fullscreen = { fade = true; shadow = true; opacity = 1; focus = true; };
+    tooltip = { fade = ${TOOLTIP_FADE}; shadow = ${TOOLTIP_SHADOW}; opacity = ${TOOLTIP_OPACITY}; focus = ${TOOLTIP_FOCUS}; };
+    dock = { shadow = ${DOCK_SHADOW}; };
+    dnd = { shadow = ${DND_SHADOW}; };
+    fullscreen = { fade = ${FULLSCREEN_FADE}; shadow = ${FULLSCREEN_SHADOW}; opacity = ${FULLSCREEN_OPACITY}; focus = ${FULLSCREEN_FOCUS}; };
 };
 EOF
 
@@ -1586,7 +1599,6 @@ create_default_config() {
 #        Configuración inicial sin transparencia                      #
 #        Autor josejp2424                                             #
 ######################################################################
-
 # ─────── ESQUINAS REDONDEADAS ───────
 corner-radius = 15;
 rounded-corners-exclude = [
@@ -1596,7 +1608,6 @@ rounded-corners-exclude = [
   "window_type = 'dock'",
   "window_type = 'desktop'"
 ];
-
 # ─────── SOMBRAS ───────
 shadow = true;
 shadow-radius = 12;
@@ -1607,18 +1618,16 @@ shadow-exclude = [
   "class_g = 'Plank'",
   "class_g = 'Conky'"
 ];
-
 # ─────── TRANSPARENCIA ───────
 inactive-opacity = 1;
 active-opacity = 1;
 frame-opacity = 1;
-inactive-opacity-override = false;
+inactive-opacity-override = true;
 inactive-dim = 0;
 focus-exclude = [
 ];
 opacity-rule = [
 ];
-
 # ─────── BLUR ───────
 blur-method = "none";
 blur-size = 10;
@@ -1630,13 +1639,11 @@ blur-background-exclude = [
   "window_type = 'dock'",
   "window_type = 'desktop'"
 ];
-
 # ─────── FADING ───────
 fading = true;
 fade-in-step = 0;
 fade-out-step = 0;
 fade-delta = 10;
-
 # ─────── GENERAL ───────
 backend = "glx";
 vsync = true;
@@ -1645,8 +1652,7 @@ log-level = "warn";
 mark-wmwin-focused = true;
 mark-ovredir-focused = true;
 detect-rounded-corners = true;
-detect-client-opacity = true;
-
+detect-client-opacity = false;
 # ─────── WINTYPES ───────
 wintypes:
 {
