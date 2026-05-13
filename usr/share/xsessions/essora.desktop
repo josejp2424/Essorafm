@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Essora
+Comment=Essora Linux Desktop (JWM)
+Exec=/usr/bin/jwm
+TryExec=/usr/bin/jwm
+Type=Application
+DesktopNames=Essora
+Icon=/usr/share/pixmaps/distributor-logo-essora.png
